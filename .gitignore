@@ -1,0 +1,14 @@
+logs/
+.venv/
+.continue/
+__pycache__/
+.pytest_cache/
+
+*.bkp
+*.log
+*.db
+*.db-journal
+*.sqlite*
+
+.env
+config.json

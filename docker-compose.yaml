@@ -1,0 +1,102 @@
+services:
+
+  bot:
+    container_name: bot
+    image: ads:1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      - synapse
+      - whatsapp
+    volumes:
+      - ./.env:/service/.env
+      - ./db:/service/db
+      - ./strings.yml:/service/strings.yml
+
+  # # # # # # # # # # # # # # # # # # # # # 
+  # Synapse Services and Databases
+  # # # # # # # # # # # # # # # # # # # # # 
+  synapse:
+    container_name: synapse
+    image: matrixdotorg/synapse:latest
+    restart: unless-stopped
+    depends_on:
+      - synapse-db
+    environment:
+      SYNAPSE_SERVER_NAME: "matrix.local"
+      SYNAPSE_REPORT_STATS: "no"
+    volumes:
+      - synapse:/data/
+    # ports:
+    #   - "8008:8008"    # client API
+    networks:
+      - backend
+
+
+  synapse-db:
+    image: docker.io/postgres:15-alpine
+    container_name: synapse-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass # CHANGE ME!
+      - POSTGRES_DB=db
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - db-synapse:/var/lib/postgresql/data
+    # ports:
+    #   - "5432:5432"
+    networks:
+      - backend
+
+  # # # # # # # # # # # # # # # # # # # # # 
+  # Whatsapp Services and Databases
+  # # # # # # # # # # # # # # # # # # # # # 
+  whatsapp:
+    container_name: whatsapp
+    image: dock.mau.dev/mautrix/whatsapp:latest
+    restart: unless-stopped
+    # working_dir: /data
+    depends_on:
+      - synapse
+      - whatsapp-db
+    volumes:
+      - whatsapp:/data:rw
+    # ports:
+    #   - "29318:29318"
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+    networks:
+      - backend
+
+  whatsapp-db:
+    container_name: whatsapp-db
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: db
+    volumes:
+      - db-whatsapp:/var/lib/postgresql/data
+    networks:
+      - backend
+
+
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  db-synapse:
+  db-whatsapp:
+  synapse:
+  whatsapp:
+
+  

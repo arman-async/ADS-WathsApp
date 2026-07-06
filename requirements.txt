@@ -1,0 +1,15 @@
+aiogram==3.29.1
+aiosqlite==0.22.1
+audioop-lts==0.2.2
+httpx==0.28.1
+matrix-nio==0.25.2
+numpy==2.5.0
+pydantic==2.13.4
+pydub==0.25.1
+pytest-asyncio==1.4.0
+pytest-env==1.6.0
+pytest==9.1.1
+python-dotenv==1.2.2
+python-magic==0.4.27
+PyYAML==6.0.3
+sqlalchemy==2.0.51
