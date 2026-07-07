@@ -58,6 +58,7 @@ class Messages:
     Enter_Phonenumber: str = string_get("msg_enter_phonenumber")
     Confirm_or_Cancel: str = string_get("msg_confirm_or_cancel")
     Confirm_Start_Send: str = string_get("msg_confirm_start_send")
+    Syncing: str = string_get("msg_syncing")
 
 logger.info("Loading button definitions")
 
@@ -71,3 +72,5 @@ class Buttons:
     Continue: str = string_get("but_continue")
     Vrey_Fast: str = string_get("but_vrey_fast")
     Select_All: str = string_get("but_select_all")
+    Next: str = string_get("but_next") 
+    Previous: str = string_get("but_previous") 

@@ -8,7 +8,7 @@ from app.db.session import get_db
 
 from . import states, ui
 from .client import DP
-from .common import get_ws_group_inline_but, send_message_prosess
+from .common import select_contecs, send_message_prosess
 from .utils import get_chat_context
 
 
@@ -56,9 +56,7 @@ async def select_contact(callback: CallbackQuery, state: FSMContext):
     await state.update_data({"data": data})
 
     await callback.answer(Messages.Wait)
-    await callback.message.edit_reply_markup(
-        reply_markup=(await get_ws_group_inline_but(callback, data))
-    )
+    await select_contecs(update=callable, state_data=data)
 
 
 @DP.callback_query(
@@ -70,11 +68,22 @@ async def select_contact_all(callback: CallbackQuery, state: FSMContext):
     await state.update_data({"data": data})
 
     await callback.answer(Messages.Wait)
-    await callback.message.edit_reply_markup(
-        reply_markup=(await get_ws_group_inline_but(callback, data))
-    )
+    await select_contecs(update=callable, state_data=data)
 
 
+
+@DP.callback_query(
+    states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CONTACTS_PAGE)
+)
+async def change_page(callback: CallbackQuery, state: FSMContext):
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+    data.page = int(callback.data.split(";")[1])
+    await state.update_data({"data": data})
+    
+    await callback.answer(Messages.Wait)
+    await select_contecs(update=callable, state_data=data)
+
+    
 # =============================================
 # Start Resive Message
 # =============================================

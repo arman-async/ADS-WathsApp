@@ -9,23 +9,33 @@ import nio
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
-from app.core.logging import logger
 
-_last_sync = 0.0
-_interval_sync = 120
+_last_sync_contacts = 0.0
+_interval_sync_contacts = 120
 
 
-async def sync_if_needed(connector: wa.WhatsAppConnected):
-
-    global _last_sync
-    if time.time() - _last_sync < _interval_sync:
+async def sync_contacts(connector: wa.WhatsAppConnected):
+    global _last_sync_contacts
+    if time.time() - _last_sync_contacts < _interval_sync_contacts:
         return
-
     await connector.sync()
     for s in ("group", "groups", "contacts"):
         await connector.send_text(await connector.bot_room(), f"!wa sync {s}")
 
     await connector.accept_invites()
+    _last_sync_contacts = time.time()
+
+
+_last_sync = 0.0
+_interval_sync = 10
+
+
+async def sync(connector: wa.WhatsAppConnected):
+    global _last_sync
+    if time.time() - _last_sync < _interval_sync:
+        return
+
+    await sync_contacts()
     await connector.sync()
     _last_sync = time.time()
 
@@ -73,7 +83,7 @@ async def login_code(identifier: str) -> str:
     )
 
     await sleep(1.2)
-    
+
     ws = wa.WhatsAppInit(
         username=username,
         password=password,
@@ -82,11 +92,10 @@ async def login_code(identifier: str) -> str:
     )
 
     ws = await ws.login()
-    return await ws.login() # get code
+    return await ws.login()  # get code
 
 
 async def get_groups(connector: wa.WhatsAppConnected):
-    await sync_if_needed(connector)
     return await connector.get_dialogs(filter=filter_whatsapp_group)
 
 

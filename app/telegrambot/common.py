@@ -126,10 +126,11 @@ async def get_connector(
 
 
 @require_user
-async def get_ws_group_inline_but(
+async def select_contecs(
     update: Union[Message, CallbackQuery],
     state_data: states.DataSendMessage,
-) -> ui.InlineKeyboardMarkup:
+    page_size: int = 5,
+):
     message, chat_id = get_chat_context(update)
 
     async with get_db() as session:
@@ -140,9 +141,11 @@ async def get_ws_group_inline_but(
         return await message.answer(strings.Messages.First_Login)
 
     async with get_connector(update) as connector:
-        contacts_group, _ = await services.whatsapp.get_groups(connector)
+        await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
+        await services.whatsapp.sync(connector)
+        contacts_group, total = await services.whatsapp.get_groups(connector)
 
-        return ui.list_contacts(
+        keyboard = ui.list_contacts(
             items=tuple(
                 Contact(
                     id=contact.room_id,
@@ -152,7 +155,20 @@ async def get_ws_group_inline_but(
             ),
             selected=state_data.selected_contacts,
             selected_all=state_data.select_all,
+            page_size=page_size,
+            page=state_data.page,
         )
+    await message.edit_text(
+        strings.Messages.Select_Contact.format(
+            total=total,
+            page_now=0,
+            page_total=0,
+            select_total=total
+            if state_data.select_all
+            else len(state_data.selected_contacts),
+        )
+    )
+    await message.edit_reply_markup(keyboard)
 
 
 async def send_message(
@@ -214,17 +230,18 @@ async def send_message_prosess(
             return
 
         if data.select_all:
+            await msg.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
+            await services.whatsapp.sync(connector)
             all_groups = await services.whatsapp.get_groups(connector=connector)
             chat_list = [
-                connector.client.rooms.get(dialog.room_id)
-                for dialog in all_groups[0]
+                connector.client.rooms.get(dialog.room_id) for dialog in all_groups[0]
             ]
         elif data.selected_contacts:
             chat_list = [
                 connector.client.rooms.get(room_id)
                 for room_id in data.selected_contacts
             ]
-        
+
         for do, chat in enumerate(chat_list, start=1):
             for do_msg, message in enumerate(data.messages, start=1):
                 await msg.edit_text(

@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 
 from aiogram.enums.button_style import ButtonStyle
@@ -13,6 +14,7 @@ class CallbackData:
     CANCEL = "cancel"
     CONTACTS_SELECT_ALL = "c_sa:"
     CONTACTS_SELECT = "c_s;"
+    CONTACTS_PAGE = "c_p;"
     INTERVAL_SELECT = "i_s;"
 
 
@@ -72,8 +74,17 @@ def interval_select() -> InlineKeyboardMarkup:
 
 
 def list_contacts(
-    items: tuple[Contact], selected: list[str] = [], selected_all: bool = False
+    items: tuple[Contact, ...],
+    selected: list[str] = [],
+    selected_all: bool = False,
+    page: int = 0,
+    page_size: int = 5,
 ) -> InlineKeyboardMarkup:
+    total_pages = math.ceil(len(items) / page_size) - 1
+    page = max(0, min(page, total_pages))
+    start = page * page_size
+    end = start + page_size
+    paginated_items = items[start:end]
     contacts = [
         [
             InlineKeyboardButton(
@@ -84,7 +95,7 @@ def list_contacts(
                 else None,
             )
         ]
-        for item in items
+        for item in paginated_items
     ]
     navigation = [
         InlineKeyboardButton(
@@ -94,4 +105,14 @@ def list_contacts(
         ),
         InlineKeyboardButton(text=Buttons.Continue, callback_data=CallbackData.CONFIRM),
     ]
-    return InlineKeyboardMarkup(inline_keyboard=[navigation] + contacts)
+    page_up_down = [
+        InlineKeyboardButton(
+            text=Buttons.Next,
+            callback_data=f"{CallbackData.CONTACTS_PAGE}{page + 1}",
+        ),
+        InlineKeyboardButton(
+            text=Buttons.Previous,
+            callback_data=f"{CallbackData.CONTACTS_PAGE}{page - 1}",
+        ),
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[navigation] + contacts + page_up_down)

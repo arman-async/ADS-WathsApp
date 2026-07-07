@@ -2,7 +2,8 @@
 msg_enter_phonenumber: لطفا شماره تلفن خود را وارد کنید
 msg_confirm_or_cancel: ایا اطلاعات را تایید میکنید و میخواهید ادامه دهید ؟
 msg_sucss : با موفقیت انجام شد
-msg_wait: لطفا صبر کنید ...
+msg_wait: <b>  لطفا صبر کنید ... </b>
+msg_syncing: <b> در حال همگام سازی  </b>
 msg_error: خطایی رخ داده است
 msg_connected: <b> متصل به واتساپ </b>
 msg_disconnected: <b> عدم اتصال به واتساپ از دستور /login استفاده کنید </b>
@@ -23,7 +24,12 @@ msg_first_login: |
   نخست باید با یک حساب وارد شوید /login
 
 msg_select_contact : |
-  مخاطبان خود را برای ارسال پیام انتخاب کنید 
+  <b>  مخاطبان خود را برای ارسال پیام انتخاب کنید </b>
+  فیلتر : <i> فقط گروه </i>
+  تعداد کل : <i> {total} </i>
+  صفحه : <i> {page_now}/{page_total} </i>
+  انتخاب شده : <i> {select_total}/{total} </i>
+  
 
 msg_login_code: |
   واتساپ همین الان برای شما یک نوتفیکشن ارسال می کند
@@ -106,3 +112,5 @@ but_vrey_fast: خیلی سریع
 but_fast: سریع
 but_normal: عادی
 but_safe: امن
+but_next: بعدی
+but_previous: قبلی

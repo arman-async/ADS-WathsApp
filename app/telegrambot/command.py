@@ -10,7 +10,7 @@ from app.services import user, whatsapp
 from . import states
 from .client import DP
 from .common import (
-    get_ws_group_inline_but,
+    select_contecs,
     require_login,
     require_user,
     send_message_prosess,
@@ -71,18 +71,13 @@ async def send(message: Message, state: FSMContext):
     await state.update_data({"data": states.DataSendMessage()})
     msg = await message.reply(strings.Messages.Wait)
     try:
-        keyboard = await get_ws_group_inline_but(message, states.DataSendMessage())
+        await select_contecs(message, states.DataSendMessage())
     except AttributeError as e:
-        logger.error(f"Failed to get inline keyboard: {e}")
+        logger.error(f"Failed Show Contacts Select : {e}")
         await msg.edit_text(strings.Messages.Error_Retry)
         return
 
-    if not keyboard:  # empty keyboard
-        await msg.edit_text(strings.Messages.Error_Retry)
-        return
-
-    await msg.edit_text(strings.Messages.Select_Contact)
-    await msg.edit_reply_markup(reply_markup=keyboard)
+    
 
 
 @DP.message(states.SendMessage.SEND, Command("confirm"))
