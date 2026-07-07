@@ -163,7 +163,7 @@ async def select_contecs(
         strings.Messages.Select_Contact.format(
             total=total,
             page_now=state_data.page,
-            page_total=math.ceil(len(contacts_group) / page_size) - 1,
+            page_total=math.ceil(len(contacts_group) / page_size),
             select_total=total
             if state_data.select_all
             else len(state_data.selected_contacts),

@@ -81,7 +81,10 @@ def list_contacts(
     page_size: int = 5,
 ) -> InlineKeyboardMarkup:
     total_pages = math.ceil(len(items) / page_size) - 1
-    page = max(0, min(page, total_pages))
+    if page < 0:
+        page = 0
+    if page > total_pages:
+        page = total_pages
     start = page * page_size
     end = start + page_size
     paginated_items = items[start:end]
@@ -114,6 +117,5 @@ def list_contacts(
             text=Buttons.Next,
             callback_data=f"{CallbackData.CONTACTS_PAGE}{page + 1}",
         ),
-        
     ]
     return InlineKeyboardMarkup(inline_keyboard=[navigation, *contacts, page_up_down])
