@@ -71,7 +71,7 @@ async def send(message: Message, state: FSMContext):
     await state.update_data({"data": states.DataSendMessage()})
     msg = await message.reply(strings.Messages.Wait)
     try:
-        await select_contecs(message, states.DataSendMessage())
+        await select_contecs(msg, states.DataSendMessage())
     except AttributeError as e:
         logger.error(f"Failed Show Contacts Select : {e}")
         await msg.edit_text(strings.Messages.Error_Retry)
