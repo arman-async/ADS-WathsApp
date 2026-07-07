@@ -162,7 +162,7 @@ async def select_contecs(
     await message.edit_text(
         strings.Messages.Select_Contact.format(
             total=total,
-            page_now=state_data.page,
+            page_now=state_data.page+1,
             page_total=math.ceil(len(contacts_group) / page_size),
             select_total=total
             if state_data.select_all
