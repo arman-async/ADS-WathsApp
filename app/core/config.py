@@ -53,6 +53,7 @@ class MatrixServer(BaseSetting):
     HOMESERVER: str
     ADMIN_USERNAME: str
     ADMIN_PASSWORD: str
+    DOMAIN: str
 
 
 @dataclass(frozen=True)

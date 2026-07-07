@@ -9,7 +9,12 @@ from app.services import user, whatsapp
 
 from . import states
 from .client import DP
-from .common import get_ws_group_inline_but, send_message_prosess
+from .common import (
+    get_ws_group_inline_but,
+    require_login,
+    require_user,
+    send_message_prosess,
+)
 from .utils import get_chat_context
 
 
@@ -23,7 +28,7 @@ async def start(message: Message):
 
 @DP.message(Command("help"))
 async def help(message: Message):
-    await message.reply(strings.Messages.Confirm_Start_Send)
+    await message.reply(strings.Messages.Help)
 
 
 @DP.message(Command("commands"))
@@ -37,12 +42,15 @@ async def support(message: Message):
 
 
 @DP.message(Command("login"))
+@require_user
 async def login(message: Message, state: FSMContext):
     await state.set_state(states.LoginWhatsapp.ENTER_NUMBER)
     await message.reply(strings.Messages.Enter_Phonenumber)
 
 
 @DP.message(Command("login_status"))
+@require_user
+@require_login
 async def login_status(message: Message):
     msg = await message.reply(strings.Messages.Wait)
     async with get_db() as session:
@@ -56,6 +64,8 @@ async def login_status(message: Message):
 
 
 @DP.message(Command("send"))
+@require_user
+@require_login
 async def send(message: Message, state: FSMContext):
     await state.set_state(states.SendMessage.SELECT)
     await state.update_data({"data": states.DataSendMessage()})

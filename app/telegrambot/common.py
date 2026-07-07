@@ -63,7 +63,7 @@ def require_user(func):
         message, chat_id = get_chat_context(update)
         if not (await user_exists_in_db(update)):
             logger.info(f"User {chat_id} is not registered")
-            await message.answer(strings.strings.Messages.First_Start)
+            await message.answer(strings.Messages.First_Start)
             return
         logger.info(f"User {chat_id} is registered")
         return await func(*args, **kwargs)
@@ -98,7 +98,7 @@ def require_login(func):
         message, chat_id = get_chat_context(update)
         if not (await login_exists_in_db(update)):
             logger.info(f"User {chat_id} is not logged-WA in")
-            await message.answer(strings.strings.Messages.First_Login)
+            await message.answer(strings.Messages.First_Login)
             return
         logger.info(f"User {chat_id} is logged-WA in")
         return await func(*args, **kwargs)
@@ -137,7 +137,7 @@ async def get_ws_group_inline_but(
         account = accounts.first()
     if not isinstance(account, Identifier):
         logger.warning(f"User {chat_id} is not logged-WA in")
-        return await message.answer(strings.strings.Messages.First_Login)
+        return await message.answer(strings.Messages.First_Login)
 
     async with get_connector(update) as connector:
         contacts_group, _ = await services.whatsapp.get_groups(connector)

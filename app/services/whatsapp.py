@@ -9,6 +9,7 @@ import nio
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
+from app.core.logging import logger
 
 _last_sync = 0.0
 _interval_sync = 120
@@ -42,8 +43,8 @@ async def build_connector(
     identifier: str,
 ) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
     ws = wa.WhatsAppInit(
-        username=WhatsAppUser.gen_username(identifier, "matrix.local"),
-        password=WhatsAppUser.gen_password(identifier, "matrix.local"),
+        username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+        password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
         identifier=identifier,
     )
@@ -61,36 +62,35 @@ async def login_code(identifier: str) -> str:
         password=SETTINGS.MATRIX_SERVER.ADMIN_PASSWORD,
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
     )
+    username = WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN)
+    password = WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN)
 
-    try:
-        await MatrixUserManager.user_remove(
-            admin_token=admin_token,
-            username=WhatsAppUser.gen_username(identifier, "matrix.local"),
-            homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-        )
-    except Exception:
-        pass
-
-    await sleep(2)
-
-    create_success = await MatrixUserManager.user_create(
+    # if not (
+    #     await MatrixUserManager.check_user_exists(
+    #         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
+    #         username=username,
+    #         password=password,
+    #     )
+    # ):
+    #     breakpoint()
+    await MatrixUserManager.user_create(
         admin_token=admin_token,
-        username=WhatsAppUser.gen_username(identifier, "matrix.local"),
-        password=WhatsAppUser.gen_password(identifier, "matrix.local"),
+        username=username,
+        password=password,
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
     )
-    if not create_success:
-        raise Exception("Create User Failed (Matrix)")
 
+    await sleep(1.2)
+    
     ws = wa.WhatsAppInit(
-        username=WhatsAppUser.gen_username(identifier, "matrix.local"),
-        password=WhatsAppUser.gen_password(identifier, "matrix.local"),
+        username=username,
+        password=password,
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
         identifier=identifier,
     )
 
     ws = await ws.login()
-    return await ws.login()
+    return await ws.login() # get code
 
 
 async def get_groups(connector: wa.WhatsAppConnected):
