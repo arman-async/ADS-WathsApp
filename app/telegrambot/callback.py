@@ -68,7 +68,7 @@ async def select_contact_all(callback: CallbackQuery, state: FSMContext):
     await state.update_data({"data": data})
 
     await callback.answer(Messages.Wait)
-    await select_contecs(update=callable, state_data=data)
+    await select_contecs(update=callback, state_data=data)
 
 
 
@@ -81,7 +81,7 @@ async def change_page(callback: CallbackQuery, state: FSMContext):
     await state.update_data({"data": data})
     
     await callback.answer(Messages.Wait)
-    await select_contecs(update=callable, state_data=data)
+    await select_contecs(update=callback, state_data=data)
 
     
 # =============================================
