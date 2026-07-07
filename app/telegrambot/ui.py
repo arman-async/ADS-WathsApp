@@ -115,4 +115,4 @@ def list_contacts(
             callback_data=f"{CallbackData.CONTACTS_PAGE}{page - 1}",
         ),
     ]
-    return InlineKeyboardMarkup(inline_keyboard=[navigation] + contacts + page_up_down)
+    return InlineKeyboardMarkup(inline_keyboard=[[navigation], contacts, [page_up_down]])
