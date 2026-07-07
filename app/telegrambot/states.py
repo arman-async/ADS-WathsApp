@@ -23,7 +23,7 @@ class DataSendMessage():
     selected_contacts: List[str] = field(default_factory=list)
     messages : List[Message] = field(default_factory=list)
     interval_mode: IntervalSendMessage = field(default_factory=lambda: IntervalSendMessageMode.NORMAL)
-    page: int = 1
+    page: int = 0
 
 class SendMessage(StatesGroup):
     SELECT = State()
