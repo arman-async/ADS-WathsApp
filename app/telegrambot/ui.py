@@ -107,12 +107,13 @@ def list_contacts(
     ]
     page_up_down = [
         InlineKeyboardButton(
-            text=Buttons.Next,
-            callback_data=f"{CallbackData.CONTACTS_PAGE}{page + 1}",
-        ),
-        InlineKeyboardButton(
             text=Buttons.Previous,
             callback_data=f"{CallbackData.CONTACTS_PAGE}{page - 1}",
         ),
+        InlineKeyboardButton(
+            text=Buttons.Next,
+            callback_data=f"{CallbackData.CONTACTS_PAGE}{page + 1}",
+        ),
+        
     ]
     return InlineKeyboardMarkup(inline_keyboard=[navigation, *contacts, page_up_down])
