@@ -65,14 +65,6 @@ async def login_code(identifier: str) -> str:
     username = WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN)
     password = WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN)
 
-    # if not (
-    #     await MatrixUserManager.check_user_exists(
-    #         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-    #         username=username,
-    #         password=password,
-    #     )
-    # ):
-    #     breakpoint()
     await MatrixUserManager.user_create(
         admin_token=admin_token,
         username=username,
