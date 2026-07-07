@@ -13,9 +13,9 @@ class IntervalSendMessage(NamedTuple):
 @dataclass
 class IntervalSendMessageMode():
     VEREY_FAST = IntervalSendMessage(1, 5, 1)
-    FAST = IntervalSendMessage(1, 10, 2)
-    NORMAL = IntervalSendMessage(1, 15, 3)
-    SLOW = IntervalSendMessage(1, 20, 4)
+    FAST = IntervalSendMessage(1, 25, 2)
+    NORMAL = IntervalSendMessage(1, 125, 3)
+    SLOW = IntervalSendMessage(1, 300, 4)
     
 @dataclass
 class DataSendMessage():
