@@ -97,10 +97,10 @@ def require_login(func):
         update = extract_update(*args, **kwargs)
         message, chat_id = get_chat_context(update)
         if not (await login_exists_in_db(update)):
-            logger.info(f"User {chat_id} is not logged-WA in")
+            logger.info(f"User {chat_id} is not regestered-WA in")
             await message.answer(strings.Messages.First_Login)
             return
-        logger.info(f"User {chat_id} is logged-WA in")
+        logger.info(f"User {chat_id} is regestered-WA in")
         return await func(*args, **kwargs)
 
     return wrapper
@@ -117,7 +117,7 @@ async def get_connector(
         account = accounts.first()
 
     if not isinstance(account, Identifier):
-        logger.warning(f"User {chat_id} is not logged-WA in")
+        logger.warning(f"User {chat_id} is not regestered-WA in")
         yield None
         return
 
@@ -137,7 +137,7 @@ async def select_contecs(
         accounts = await services.user.get_identifiers(session, chat_id)
         account = accounts.first()
     if not isinstance(account, Identifier):
-        logger.warning(f"User {chat_id} is not logged-WA in")
+        logger.warning(f"User {chat_id} is not regestered-WA in")
         return await message.answer(strings.Messages.First_Login)
 
     async with get_connector(update) as connector:
