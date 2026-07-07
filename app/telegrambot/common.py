@@ -1,4 +1,5 @@
 import asyncio
+import math
 import tempfile
 from contextlib import asynccontextmanager
 from functools import wraps
@@ -161,8 +162,8 @@ async def select_contecs(
     await message.edit_text(
         strings.Messages.Select_Contact.format(
             total=total,
-            page_now=0,
-            page_total=0,
+            page_now=state_data.page,
+            page_total=math.ceil(len(contacts_group) / page_size) - 1,
             select_total=total
             if state_data.select_all
             else len(state_data.selected_contacts),
