@@ -168,7 +168,7 @@ async def select_contecs(
             else len(state_data.selected_contacts),
         )
     )
-    await message.edit_reply_markup(keyboard)
+    await message.edit_reply_markup(reply_markup=keyboard)
 
 
 async def send_message(
