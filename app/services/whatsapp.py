@@ -35,7 +35,7 @@ async def sync(connector: wa.WhatsAppConnected):
     if time.time() - _last_sync < _interval_sync:
         return
 
-    await sync_contacts()
+    await sync_contacts(connector)
     await connector.sync()
     _last_sync = time.time()
 
