@@ -2,7 +2,7 @@
 msg_enter_phonenumber: لطفا شماره تلفن خود را وارد کنید
 msg_confirm_or_cancel: ایا اطلاعات را تایید میکنید و میخواهید ادامه دهید ؟
 msg_sucss : با موفقیت انجام شد
-msg_wait: <b>  لطفا صبر کنید ... </b>
+msg_wait:  لطفا صبر کنید ... 
 msg_syncing: <b> در حال همگام سازی  </b>
 msg_error: خطایی رخ داده است
 msg_connected: <b> متصل به واتساپ </b>

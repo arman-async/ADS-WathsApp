@@ -2,7 +2,7 @@ services:
 
   bot:
     container_name: bot
-    image: ads:1.0
+    image: ads:1.2
     build:
       context: .
       dockerfile: Dockerfile
