@@ -12,10 +12,12 @@ from app.models.contacts import Contact
 class CallbackData:
     CONFIRM = "confirm"
     CANCEL = "cancel"
+    CONTACTS_SELECT_RANDOM = "c_sr;"
     CONTACTS_SELECT_ALL = "c_sa:"
     CONTACTS_SELECT = "c_s;"
     CONTACTS_PAGE = "c_p;"
     INTERVAL_SELECT = "i_s;"
+    REPET_SELECT = "r_s;"
 
 
 def confirm() -> InlineKeyboardMarkup:
@@ -106,6 +108,7 @@ def list_contacts(
             callback_data=CallbackData.CONTACTS_SELECT_ALL,
             style=ButtonStyle.PRIMARY if selected_all else None,
         ),
+        InlineKeyboardButton(text=Buttons.Random, callback_data=CallbackData.CONTACTS_SELECT_RANDOM),
         InlineKeyboardButton(text=Buttons.Continue, callback_data=CallbackData.CONFIRM),
     ]
     page_up_down = [
@@ -119,3 +122,62 @@ def list_contacts(
         ),
     ]
     return InlineKeyboardMarkup(inline_keyboard=[navigation, *contacts, page_up_down])
+
+
+def repet_select() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="تکرار غیرفعال",
+                    callback_data=CallbackData.REPET_SELECT + "0",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="1 H",
+                    callback_data=CallbackData.REPET_SELECT + "1",
+                    style=ButtonStyle.DANGER,
+                ),
+                InlineKeyboardButton(
+                    text="2 H",
+                    callback_data=CallbackData.REPET_SELECT + "2",
+                    style=ButtonStyle.DANGER,
+                ),
+                InlineKeyboardButton(
+                    text="4 H",
+                    callback_data=CallbackData.REPET_SELECT + "4",
+                    style=ButtonStyle.DANGER,
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="6 H",
+                    callback_data=CallbackData.REPET_SELECT + "6",
+                    style=ButtonStyle.PRIMARY,
+                ),
+                InlineKeyboardButton(
+                    text="7 H",
+                    callback_data=CallbackData.REPET_SELECT + "7",
+                    style=ButtonStyle.PRIMARY,
+                ),
+                InlineKeyboardButton(
+                    text="8 H",
+                    callback_data=CallbackData.REPET_SELECT + "8",
+                    style=ButtonStyle.PRIMARY,
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="12 H",
+                    callback_data=CallbackData.REPET_SELECT + "12",
+                    style=ButtonStyle.SUCCESS,
+                ),
+                InlineKeyboardButton(
+                    text="24 H",
+                    callback_data=CallbackData.REPET_SELECT + "24",
+                    style=ButtonStyle.SUCCESS,
+                ),
+            ],
+        ]
+    )

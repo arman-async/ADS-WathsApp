@@ -71,6 +71,16 @@ async def select_contact_all(callback: CallbackQuery, state: FSMContext):
     await select_contecs(update=callback, state_data=data)
 
 
+@DP.callback_query(
+    states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CONTACTS_SELECT_RANDOM)
+)
+async def select_contact_random(callback: CallbackQuery, state: FSMContext):
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+    data.select_random = not data.select_random
+    await state.update_data({"data": data})
+
+    await callback.answer(Messages.Wait)
+    await select_contecs(update=callback, state_data=data)
 
 @DP.callback_query(
     states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CONTACTS_PAGE)
@@ -79,11 +89,11 @@ async def change_page(callback: CallbackQuery, state: FSMContext):
     data: states.DataSendMessage = (await state.get_data()).get("data")
     data.page = int(callback.data.split(";")[1])
     await state.update_data({"data": data})
-    
+
     await callback.answer(Messages.Wait)
     await select_contecs(update=callback, state_data=data)
 
-    
+
 # =============================================
 # Start Resive Message
 # =============================================
@@ -134,6 +144,28 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
     }
     data.interval_mode = __map.get(str(selected), 3)
     await state.update_data({"data": data})
+    await state.set_state(states.SendMessage.SELECT_REPET)
+
+    await message.edit_text(Messages.REPET_SELECT)
+    await message.edit_reply_markup(reply_markup=ui.repet_select())
+
+
+# =============================================
+# Select interval send message
+# =============================================
+@DP.callback_query(
+    states.SendMessage.SELECT_REPET,
+    F.data.startswith(ui.CallbackData.REPET_SELECT),
+)
+async def select_repet(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+    selected = callback.data.split(";")[1]
+    data.repet_min = int(selected) * 3600
+
+    await state.update_data({"data": data})
     await state.set_state(states.SendMessage.SEND)
 
     await message.edit_text(Messages.Confirm_Start_Send)
@@ -141,9 +173,21 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
 
 
 # =============================================
-# Start Send Message
+# START Send Message
 # =============================================
 @DP.callback_query(states.SendMessage.SEND, F.data.startswith(ui.CallbackData.CONFIRM))
 async def start_send_message(callback: CallbackQuery, state: FSMContext):
     await callback.answer(Messages.Wait)
+    await state.set_state(states.SendMessage.RUNING)
     return await send_message_prosess(callback, state)
+
+
+# =============================================
+# STOP Send Message
+# =============================================
+@DP.callback_query(states.SendMessage.RUNING, F.data.startswith(ui.CallbackData.CANCEL))
+async def stop_send_message(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+    await state.set_state(states.SendMessage.STOP)
+    await message.edit_text("در حال توقف ...")

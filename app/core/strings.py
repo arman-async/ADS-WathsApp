@@ -60,6 +60,9 @@ class Messages:
     Confirm_Start_Send: str = string_get("msg_confirm_start_send")
     Syncing: str = string_get("msg_syncing")
 
+    REPET_SELECT: str = string_get("msg_repet_select")
+
+
 logger.info("Loading button definitions")
 
 
@@ -72,5 +75,6 @@ class Buttons:
     Continue: str = string_get("but_continue")
     Vrey_Fast: str = string_get("but_vrey_fast")
     Select_All: str = string_get("but_select_all")
-    Next: str = string_get("but_next") 
-    Previous: str = string_get("but_previous") 
+    Next: str = string_get("but_next")
+    Previous: str = string_get("but_previous")
+    Random : str = string_get("but_random")

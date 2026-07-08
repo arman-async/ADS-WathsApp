@@ -4,7 +4,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
-from random import randint
+from random import choice, randint
 from typing import AsyncGenerator, Union
 
 import nio
@@ -162,7 +162,7 @@ async def select_contecs(
     await message.edit_text(
         strings.Messages.Select_Contact.format(
             total=total,
-            page_now=state_data.page+1,
+            page_now=state_data.page + 1,
             page_total=math.ceil(len(contacts_group) / page_size),
             select_total=total
             if state_data.select_all
@@ -222,47 +222,81 @@ async def sleep_stream_message(
 async def send_message_prosess(
     update: Union[Message, CallbackQuery], state: FSMContext
 ):
+
+    async def is_trminat() -> bool:
+        if (await state.get_state()) is states.SendMessage.RUNING:
+            return False
+        return True
+
     data: states.DataSendMessage = (await state.get_data()).get("data")
-    await state.clear()
     msg, _ = get_chat_context(update)
     async with get_connector(update) as connector:
         if not isinstance(connector, services.whatsapp.wa.WhatsAppConnected):
             await msg.edit_text(strings.Messages.Disconnected)
             return
 
+        await msg.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
+        all_groups = (await services.whatsapp.get_groups(connector=connector))[0]
+
         chat_list = []
         if data.select_all:
-            await msg.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
-            await services.whatsapp.sync(connector)
-            all_groups = await services.whatsapp.get_groups(connector=connector)
             chat_list = [
-                connector.client.rooms.get(dialog.room_id) for dialog in all_groups[0]
+                connector.client.rooms.get(dialog.room_id) for dialog in all_groups
             ]
         elif data.selected_contacts:
             chat_list = [
                 connector.client.rooms.get(room_id)
                 for room_id in data.selected_contacts
             ]
-            
-        if not chat_list:
-            await msg.edit_text("شما هیچ مخاطب (گروهی) را برای ارسال انتخاب نکردید - لیست ارسال خالی است ")
-            return 
-        for do, chat in enumerate(chat_list, start=1):
-            for do_msg, message in enumerate(data.messages, start=1):
-                await msg.edit_text(
-                    strings.Messages.Send_Prosess.format(
-                        sent_chats=do,
-                        total_chats=len(chat_list),
-                        sent_messages_in_chat=do_msg,
-                        total_messages_in_chat=len(data.messages),
+
+        if (not chat_list) and (data.select_random is False):
+            await msg.edit_text(
+                "شما هیچ مخاطب (گروهی) را برای ارسال انتخاب نکردید - لیست ارسال خالی است "
+            )
+            return
+
+        repet_round = 5 if data.repet_min else 1
+        for repet_round_now in range(1, repet_round + 1):
+            if await is_trminat():
+                await msg.edit_text("متوقف شد")
+                return
+            chat_list = [
+                connector.client.rooms.get(choice(all_groups).room_id)
+                for _ in range(int(len(all_groups) / 2))
+            ]
+            for do, chat in enumerate(chat_list, start=1):
+                for do_msg, message in enumerate(data.messages, start=1):
+                    await msg.edit_text(
+                        strings.Messages.Send_Prosess.format(
+                            sent_chats=do,
+                            total_chats=len(chat_list),
+                            sent_messages_in_chat=do_msg,
+                            total_messages_in_chat=len(data.messages),
+                        )
                     )
-                )
-                if not isinstance(message, Message):
-                    continue
-                await send_message(connector, chat, message, update.bot)
+                    if not isinstance(message, Message):
+                        continue
+                    await send_message(connector, chat, message, update.bot)
+                    if await is_trminat():
+                        await msg.edit_text("متوقف شد")
+                        return
+                    await sleep_stream_message(
+                        msg,
+                        data.interval_mode.send_message,
+                        text=strings.Messages.Send_Prosess.format(
+                            sent_chats=do,
+                            total_chats=len(chat_list),
+                            sent_messages_in_chat=do_msg,
+                            total_messages_in_chat=len(data.messages),
+                        )
+                        + "\n\n"
+                        + strings.Messages.Wait,
+                    )
                 await sleep_stream_message(
                     msg,
-                    data.interval_mode.send_message,
+                    randint(
+                        data.interval_mode.start_range, data.interval_mode.end_range
+                    ),
                     text=strings.Messages.Send_Prosess.format(
                         sent_chats=do,
                         total_chats=len(chat_list),
@@ -272,16 +306,15 @@ async def send_message_prosess(
                     + "\n\n"
                     + strings.Messages.Wait,
                 )
-            await sleep_stream_message(
-                msg,
-                randint(data.interval_mode.start_range, data.interval_mode.end_range),
-                text=strings.Messages.Send_Prosess.format(
-                    sent_chats=do,
-                    total_chats=len(chat_list),
-                    sent_messages_in_chat=do_msg,
-                    total_messages_in_chat=len(data.messages),
+            if await is_trminat():
+                await msg.edit_text("متوقف شد")
+                return
+            if data.repet_min:
+                await sleep_stream_message(
+                    msg,
+                    data.repet_min,
+                    f"در حال حاضر {repet_round_now} دور پیام ارسال کردیم"
+                    + "\n"
+                    + "دور بعدی ارسال پیام ",
                 )
-                + "\n\n"
-                + strings.Messages.Wait,
-            )
     await msg.edit_text(strings.Messages.Send_Prosess_End)
