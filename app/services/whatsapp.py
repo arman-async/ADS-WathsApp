@@ -46,10 +46,39 @@ async def sync(connector: wa.WhatsAppConnected):
     await connector.sync()
 
 
-@alru_cache()
+# @alru_cache()
+# async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
+#     start_time = time.perf_counter()
+#     logger.info(f"Building new WhatsApp connector: {identifier}")
+#     ws = wa.WhatsAppInit(
+#         username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+#         password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+#         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
+#         identifier=identifier,
+#     )
+
+#     try:
+#         ws = await ws.login()
+#         client = await ws.connect()
+#     except Exception as e:
+#         logger.error(f"Connector initialization failed: {identifier} | error={e}")
+#         raise e
+#     else:
+#         duration = time.perf_counter() - start_time
+#         logger.info(
+#             f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
+#         )
+#         return client
+
+
+_CONNECTOR_CACHE = {}
 async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
+    if identifier in _CONNECTOR_CACHE:
+        return _CONNECTOR_CACHE[identifier]
+
     start_time = time.perf_counter()
     logger.info(f"Building new WhatsApp connector: {identifier}")
+    
     ws = wa.WhatsAppInit(
         username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
         password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
@@ -63,12 +92,15 @@ async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
     except Exception as e:
         logger.error(f"Connector initialization failed: {identifier} | error={e}")
         raise e
-    else:
-        duration = time.perf_counter() - start_time
-        logger.info(
-            f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
-        )
-        return client
+    
+    duration = time.perf_counter() - start_time
+    logger.info(f"Connector initialized successfully: {identifier} | duration={duration:.4f}s")
+    
+    if client is not None:
+        _CONNECTOR_CACHE[identifier] = client
+        
+    return client
+
 
 
 @asynccontextmanager
