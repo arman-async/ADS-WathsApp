@@ -141,7 +141,7 @@ async def select_contecs(
         logger.warning(f"User {chat_id} is not regestered-WA in")
         return await message.answer(strings.Messages.First_Login)
 
-    await message.edit_text(strings.Messages.Wait)
+    
     async with get_connector(update) as connector:
         await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
         await services.whatsapp.sync_contacts(connector)
