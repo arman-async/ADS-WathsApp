@@ -230,6 +230,7 @@ async def send_message_prosess(
             await msg.edit_text(strings.Messages.Disconnected)
             return
 
+        chat_list = []
         if data.select_all:
             await msg.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
             await services.whatsapp.sync(connector)
@@ -242,7 +243,10 @@ async def send_message_prosess(
                 connector.client.rooms.get(room_id)
                 for room_id in data.selected_contacts
             ]
-
+            
+        if not chat_list:
+            await msg.edit_text(strings.Messages.Error_Retry + "\n" + "لیست چت خالی است")
+        
         for do, chat in enumerate(chat_list, start=1):
             for do_msg, message in enumerate(data.messages, start=1):
                 await msg.edit_text(
