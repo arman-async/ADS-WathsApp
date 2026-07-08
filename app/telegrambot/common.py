@@ -213,9 +213,9 @@ async def sleep_stream_message(
     for sec in range(1, sleep_time + 1):
         await asyncio.sleep(1)
         try:
-            await message.edit_text(f"{text} {sec}/{sleep_time}")
-            if reply_markup:
-                await message.edit_reply_markup(reply_markup=reply_markup)
+            await message.edit_text(f"{text} {sec}/{sleep_time}", reply_markup=reply_markup)
+            # if reply_markup:
+            #     await message.edit_reply_markup(reply_markup=reply_markup)
         except TelegramBadRequest:
             pass
 
