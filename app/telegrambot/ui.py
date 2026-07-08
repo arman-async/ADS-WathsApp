@@ -114,7 +114,6 @@ def list_contacts(
             callback_data=CallbackData.CONTACTS_SELECT_RANDOM,
             style=ButtonStyle.PRIMARY if selected_rand else None,
         ),
-        InlineKeyboardButton(text=Buttons.Continue, callback_data=CallbackData.CONFIRM),
     ]
     page_up_down = [
         InlineKeyboardButton(
@@ -126,7 +125,18 @@ def list_contacts(
             callback_data=f"{CallbackData.CONTACTS_PAGE}{page + 1}",
         ),
     ]
-    return InlineKeyboardMarkup(inline_keyboard=[navigation, *contacts, page_up_down])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=Buttons.Continue, callback_data=CallbackData.CONFIRM
+                ),
+            ],
+            navigation,
+            *contacts,
+            page_up_down,
+        ]
+    )
 
 
 def repet_select() -> InlineKeyboardMarkup:
