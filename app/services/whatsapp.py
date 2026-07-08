@@ -55,7 +55,7 @@ def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
         return True
     return False
 
-
+# _cache_connctor : dict[str, dict[int, wa.WhatsAppConnected]]
 @asynccontextmanager
 async def build_connector(
     identifier: str,
@@ -66,6 +66,7 @@ async def build_connector(
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
         identifier=identifier,
     )
+    logger.info(f"build WatsApp connector start: {identifier}")
     try:
         ws = await ws.login()
         client = await ws.connect()
