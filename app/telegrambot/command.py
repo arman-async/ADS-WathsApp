@@ -56,7 +56,7 @@ async def login_status(message: Message):
     async with get_db() as session:
         qu_res = await user.get_identifiers(session, message.chat.id)
         identifier = qu_res.first()
-    async with whatsapp.build_connector(identifier.phone) as connector:
+    async with whatsapp.get_connector(identifier.phone) as connector:
         if isinstance(connector, whatsapp.wa.WhatsAppConnected):
             await msg.edit_text(strings.Messages.Connected)
         else:

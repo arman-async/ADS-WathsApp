@@ -122,7 +122,7 @@ async def get_connector(
         yield None
         return
 
-    async with services.whatsapp.build_connector(account.phone) as connector:
+    async with services.whatsapp.get_connector(account.phone) as connector:
         yield connector
 
 
@@ -143,7 +143,7 @@ async def select_contecs(
 
     async with get_connector(update) as connector:
         await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
-        await services.whatsapp.sync(connector)
+        await services.whatsapp.sync_contacts(connector)
         contacts_group, total = await services.whatsapp.get_groups(connector)
 
         keyboard = ui.list_contacts(
