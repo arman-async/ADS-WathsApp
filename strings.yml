@@ -6,7 +6,10 @@ msg_wait:  لطفا صبر کنید ...
 msg_syncing: <b> در حال همگام سازی  </b>
 msg_error: خطایی رخ داده است
 msg_connected: <b> متصل به واتساپ </b>
-msg_disconnected: <b> عدم اتصال به واتساپ از دستور /login_status | /login استفاده کنید </b>
+msg_disconnected: |
+  <b> عدم اتصال به واتساپ </b>
+  <b> برای اتصال مجدد دستور /login استفاده کنید </b>
+  
 msg_resevied_message: پیام ذخیره شد 
 msg_canceled: فرایند متوقف شد 
 msg_repet_select: زمان تکرار را انتخاب کنید 
