@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import nio
+from async_lru import alru_cache
 
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
@@ -61,7 +62,6 @@ def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
 class ConnctorCached:
     cleint: wa.WhatsAppConnected
     lock: bool = False
-    
 
 
 class WhatsAppConnectorManager:
@@ -110,24 +110,9 @@ class WhatsAppConnectorManager:
 _WATSAPP_CONNECTOR_MANAGER = WhatsAppConnectorManager()
 
 
-@asynccontextmanager
-async def build_connector(
-    identifier: str,
-) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
+@alru_cache()
+async def get_connctor(identifier: str) -> wa.WhatsAppConnected | None:
     start_time = time.perf_counter()
-    in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
-    print(f"in_cache: {in_cache}")
-    if in_cache:
-        duration = time.perf_counter() - start_time
-        logger.debug(
-            f"Connector retrieved from cache: {identifier} | duration={duration:.4f}s"
-        )
-        try:
-            yield in_cache.cleint
-        finally:
-            await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
-        return
-
     logger.info(f"Building new WhatsApp connector: {identifier}")
     ws = wa.WhatsAppInit(
         username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
@@ -139,18 +124,59 @@ async def build_connector(
     try:
         ws = await ws.login()
         client = await ws.connect()
+    except Exception as e:
+        logger.error(f"Connector initialization failed: {identifier} | error={e}")
+        raise e
+    else:
         duration = time.perf_counter() - start_time
         logger.info(
             f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
         )
-        await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
-        try:
-            yield client
-        finally:
-            await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
-    except Exception as e:
-        logger.error(f"Connector initialization failed: {identifier} | error={e}")
-        raise e
+        return client
+
+
+@asynccontextmanager
+async def build_connector(
+    identifier: str,
+) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
+    yield await get_connctor(identifier)
+    # start_time = time.perf_counter()
+    # in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
+    # print(f"in_cache: {in_cache}")
+    # if in_cache:
+    #     duration = time.perf_counter() - start_time
+    #     logger.debug(
+    #         f"Connector retrieved from cache: {identifier} | duration={duration:.4f}s"
+    #     )
+    #     try:
+    #         yield in_cache.cleint
+    #     finally:
+    #         await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
+    #     return
+
+    # logger.info(f"Building new WhatsApp connector: {identifier}")
+    # ws = wa.WhatsAppInit(
+    #     username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+    #     password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+    #     homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
+    #     identifier=identifier,
+    # )
+
+    # try:
+    #     ws = await ws.login()
+    #     client = await ws.connect()
+    #     duration = time.perf_counter() - start_time
+    #     logger.info(
+    #         f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
+    #     )
+    #     await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
+    #     try:
+    #         yield client
+    #     finally:
+    #         await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
+    # except Exception as e:
+    #     logger.error(f"Connector initialization failed: {identifier} | error={e}")
+    #     raise e
 
 
 async def login_code(identifier: str) -> str:

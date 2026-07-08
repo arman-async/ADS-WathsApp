@@ -13,3 +13,4 @@ python-dotenv==1.2.2
 python-magic==0.4.27
 PyYAML==6.0.3
 sqlalchemy==2.0.51
+async-lru==2.3.0
