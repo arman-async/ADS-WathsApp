@@ -79,6 +79,7 @@ def list_contacts(
     items: tuple[Contact, ...],
     selected: list[str] = [],
     selected_all: bool = False,
+    selected_rand: bool = False,
     page: int = 0,
     page_size: int = 5,
 ) -> InlineKeyboardMarkup:
@@ -108,7 +109,11 @@ def list_contacts(
             callback_data=CallbackData.CONTACTS_SELECT_ALL,
             style=ButtonStyle.PRIMARY if selected_all else None,
         ),
-        InlineKeyboardButton(text=Buttons.Random, callback_data=CallbackData.CONTACTS_SELECT_RANDOM),
+        InlineKeyboardButton(
+            text=Buttons.Random,
+            callback_data=CallbackData.CONTACTS_SELECT_RANDOM,
+            style=ButtonStyle.PRIMARY if selected_rand else None,
+        ),
         InlineKeyboardButton(text=Buttons.Continue, callback_data=CallbackData.CONFIRM),
     ]
     page_up_down = [

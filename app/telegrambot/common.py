@@ -156,6 +156,7 @@ async def select_contecs(
             ),
             selected=state_data.selected_contacts,
             selected_all=state_data.select_all,
+            selected_rand=state_data.select_random,
             page_size=page_size,
             page=state_data.page,
         )
