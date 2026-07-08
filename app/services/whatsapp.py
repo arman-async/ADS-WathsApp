@@ -1,11 +1,12 @@
 import time
 from asyncio import sleep
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncGenerator
 
 import nio
-from dataclasses import dataclass
+
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
@@ -96,7 +97,6 @@ async def _set_connctor_in_cache(
     _CACHE_CONNCTOR[identifier][last_index] = ConnctorCached(lock=True, cleint=connctor)
 
 
-
 class WhatsAppConnectorManager:
     def __init__(self):
         self._cache: dict[str, dict[int, ConnctorCached]] = {}
@@ -117,7 +117,7 @@ class WhatsAppConnectorManager:
             except Exception as e:
                 logger.error(f"Connector check failed: {e}")
                 del self._cache[identifier][index]
-            
+
             connector.lock = True
             return connector
         return None
@@ -125,54 +125,66 @@ class WhatsAppConnectorManager:
     async def free_connector(self, identifier: str, connector: ConnctorCached) -> None:
         if identifier not in self._cache:
             self._cache[identifier] = {}
-        
+
         index = self._get_next_index(identifier)
         connector.lock = False
         self._cache[identifier][index] = connector
 
-    async def set_connector(self, identifier: str, client: wa.WhatsAppConnected) -> None:
+    async def set_connector(
+        self, identifier: str, client: wa.WhatsAppConnected
+    ) -> None:
         if identifier not in self._cache:
             self._cache[identifier] = {}
-        
+
         index = self._get_next_index(identifier)
         self._cache[identifier][index] = ConnctorCached(lock=True, cleint=client)
 
+
 _WATSAPP_CONNECTOR_MANAGER = WhatsAppConnectorManager()
+
 
 @asynccontextmanager
 async def build_connector(
     identifier: str,
 ) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
+    start_time = time.perf_counter()
     in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
+
     if in_cache:
+        duration = time.perf_counter() - start_time
+        logger.debug(
+            f"Connector retrieved from cache: {identifier} | duration={duration:.4f}s"
+        )
         try:
-            yield in_cache.cleint
+            yield in_cache.client
         finally:
             await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
         return
-    
+
+    logger.info(f"Building new WhatsApp connector: {identifier}")
     ws = wa.WhatsAppInit(
-            username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-            password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-            homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-            identifier=identifier,
-        )
+        username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+        password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+        homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
+        identifier=identifier,
+    )
+
     try:
-        
-        logger.info(f"build WatsApp connector start: {identifier}")
+        ws = await ws.login()
+        client = await ws.connect()
+        duration = time.perf_counter() - start_time
+        logger.info(
+            f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
+        )
+
         try:
-            ws = await ws.login()
-            client = await ws.connect()
-        except Exception as e:
-            logger.error(f"build WatsApp connector failed: {identifier} - {e}")
-            yield None
-        else:
-            logger.info(f"build WatsApp connector success: {identifier}")
             yield client
+        finally:
             await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
     except Exception as e:
-        logger.critical(f"build WatsApp connector failed: {identifier} - {e}")
+        logger.error(f"Connector initialization failed: {identifier} | error={e}")
         raise e
+
 
 async def login_code(identifier: str) -> str:
     admin_token = await MatrixUserManager.get_token(
