@@ -4,7 +4,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
-from random import choice, randint
+from random import choice, choices, randint, uniform
 from typing import AsyncGenerator, Union
 
 import nio
@@ -141,7 +141,6 @@ async def select_contecs(
         logger.warning(f"User {chat_id} is not regestered-WA in")
         return await message.answer(strings.Messages.First_Login)
 
-    
     async with get_connector(update) as connector:
         await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
         await services.whatsapp.sync_contacts(connector)
@@ -324,3 +323,58 @@ async def send_message_prosess(
                     reply_markup=ui.cancel(),
                 )
     await msg.edit_text(strings.Messages.Send_Prosess_End)
+
+
+async def continuous_message_sending(
+    update: Union[Message, CallbackQuery], state: FSMContext
+):
+    msg, _ = get_chat_context(update)
+    delays = {
+        0: (0.5, 1, 10, 15, 30, 45, 60, 75),
+        1: (0.7, 2, 20, 25, 50, 75, 100, 125),
+        2: (0.9, 4, 25, 40, 60, 80, 100, 130),
+        3: (1.5, 5, 30, 60, 120, 180, 240, 300),
+    }
+    weights = [10, 15, 17, 15, 15, 15, 8, 5]
+    interval_mode = int((await state.get_data()).get("interval"))
+
+    def get_interval() -> float:
+        a = choices(delays[interval_mode], weights=weights, k=1)[0]
+        b = choices(delays[interval_mode], weights=weights, k=1)[0]
+        return uniform(float(min(a, b)), float(max(a, b)) + 0.25)
+
+    async def check_termination() -> bool:
+        run_state = await state.get_state()
+        if run_state == states.ContinuousMessageSending.STOP:
+            return True
+        return False
+
+    async def get_random_chat() -> nio.MatrixRoom:
+        async with get_connector(update) as connector:
+            all_groups = await wa_service.get_groups(connector)
+            return choice(all_groups)
+
+    async def get_random_message() -> Message:
+        messages = (await state.get_data()).get("messages")
+        return choice(messages)
+
+    counter_sent_message = 0
+    while True:
+        if await check_termination():
+            await msg.edit_text(strings.Messages.Canceled)
+            return
+        chat = await get_random_chat()
+        message = await get_random_message()
+        async with get_connector(update) as connector:
+            await send_message(connector, chat, message, update.bot)
+            counter_sent_message += 1
+        await sleep_stream_message(
+            msg,
+            get_interval(),
+            text=strings.Messages.Send_Prosess_Continue.format(
+                sent_messages=counter_sent_message
+            )
+            + "\n"
+            + strings.Messages.Wait,
+            reply_markup=ui.cancel(),
+        )

@@ -28,3 +28,17 @@ async def resiver_messages(message: Message, state: FSMContext):
     await state.update_data({"data": data})
     logger.info(f"Saved message: {message.message_id}")
     await message.reply(strings.Messages.Resevied_Message, reply_markup=ui.confirm())
+
+
+@DP.message(states.ContinuousMessageSending.RESIVE)
+async def resiver_messages_contin(message: Message, state: FSMContext):
+    messages: list[Message] = (await state.get_data()).get("messages")
+    if (not utils.extract_file_id(message)) and (not message.text):
+        logger.info(f"Drapped message: {message.message_id}")
+        await message.delete()
+        return
+
+    messages.append(message)
+    await state.update_data({"messages": messages})
+    logger.info(f"Saved message: {message.message_id}")
+    await message.reply(strings.Messages.Resevied_Message, reply_markup=ui.confirm())

@@ -59,7 +59,7 @@ class Messages:
     Confirm_or_Cancel: str = string_get("msg_confirm_or_cancel")
     Confirm_Start_Send: str = string_get("msg_confirm_start_send")
     Syncing: str = string_get("msg_syncing")
-
+    Send_Prosess_Continue: str = string_get("msg_send_prosess_continue")
     REPET_SELECT: str = string_get("msg_repet_select")
 
 

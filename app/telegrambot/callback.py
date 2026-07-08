@@ -8,7 +8,7 @@ from app.db.session import get_db
 
 from . import states, ui
 from .client import DP
-from .common import select_contecs, send_message_prosess
+from .common import select_contecs, send_message_prosess, continuous_message_sending
 from .utils import get_chat_context
 
 
@@ -65,7 +65,7 @@ async def select_contact(callback: CallbackQuery, state: FSMContext):
 async def select_contact_all(callback: CallbackQuery, state: FSMContext):
     data: states.DataSendMessage = (await state.get_data()).get("data")
     data.select_all = not data.select_all
-    data.select_random = False if data.select_all else data.select_random 
+    data.select_random = False if data.select_all else data.select_random
     await state.update_data({"data": data})
 
     await callback.answer(Messages.Wait)
@@ -78,11 +78,12 @@ async def select_contact_all(callback: CallbackQuery, state: FSMContext):
 async def select_contact_random(callback: CallbackQuery, state: FSMContext):
     data: states.DataSendMessage = (await state.get_data()).get("data")
     data.select_random = not data.select_random
-    data.select_all = False if data.select_random else data.select_all 
+    data.select_all = False if data.select_random else data.select_all
     await state.update_data({"data": data})
 
     await callback.answer(Messages.Wait)
     await select_contecs(update=callback, state_data=data)
+
 
 @DP.callback_query(
     states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CONTACTS_PAGE)
@@ -193,3 +194,43 @@ async def stop_send_message(callback: CallbackQuery, state: FSMContext):
     await callback.answer(Messages.Wait)
     await state.set_state(states.SendMessage.STOP)
     await message.edit_text("در حال توقف ...")
+
+
+# ===========================================================================================
+
+
+@DP.callback_query(
+    states.ContinuousMessageSending.RESIVE, F.data.startswith(ui.CallbackData.CONFIRM)
+)
+async def show_inteval_items(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+
+    await state.set_state(states.ContinuousMessageSending.SELECT_INTERVAL)
+    await message.edit_text(Messages.Select_Interval)
+    await message.edit_reply_markup(reply_markup=ui.interval_select())
+
+
+@DP.callback_query(
+    states.ContinuousMessageSending.SELECT_INTERVAL,
+    F.data.startswith(ui.CallbackData.INTERVAL_SELECT),
+)
+async def select_interval_cntin(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+    selected = int(callback.data.split(";")[1])
+
+    await state.update_data({"interval": selected})
+    await state.set_state(states.ContinuousMessageSending.RUNING)
+    await message.edit_text(Messages.Wait)
+    await continuous_message_sending(callback, state)
+
+
+@DP.callback_query(
+    states.ContinuousMessageSending.RUNING,
+    F.data.startswith(ui.CallbackData.CANCEL),
+)
+async def stop_cntin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer(Messages.Wait)
+    await state.set_state(states.ContinuousMessageSending.STOP)
+

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, NamedTuple
+
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
@@ -46,3 +47,12 @@ class LoginWhatsapp(StatesGroup):
     ENTER_NUMBER = State()
     CONFIRM_NUMBER = State()
     number: str
+
+
+class ContinuousMessageSending(StatesGroup):
+    RESIVE = State()
+    SELECT_INTERVAL = State()
+    RUNING = State()
+    STOP = State()
+    messages: list[Message] = []
+    interval: int = 3

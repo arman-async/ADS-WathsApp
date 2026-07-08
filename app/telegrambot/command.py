@@ -78,7 +78,13 @@ async def send(message: Message, state: FSMContext):
         return
 
     
-
+@DP.message(Command("send_continuous"))
+@require_user
+@require_login
+async def send_continuous(message: Message, state: FSMContext):
+    await state.set_state(states.ContinuousMessageSending.RESIVE)
+    await message.answer(strings.Messages.Reseving_Message)
+    
 
 @DP.message(states.SendMessage.SEND, Command("confirm"))
 async def start_send(message: Message, state: FSMContext):
