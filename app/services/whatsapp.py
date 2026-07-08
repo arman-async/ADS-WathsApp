@@ -10,6 +10,7 @@ from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
 from app.core.logging import logger
+
 _last_sync_contacts = 0.0
 _interval_sync_contacts = 120
 
@@ -44,6 +45,13 @@ def filter_whatsapp_group(room: nio.MatrixRoom) -> bool:
     if not (room.name and room.display_name):
         return True
     if not ((room.room_type != "m.space") and (len(room.users) > 2)):
+        return True
+    return False
+
+
+def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
+    title: str = room.name if room.name else room.display_name
+    if title.lower() == "whatsapp status broadcast":
         return True
     return False
 
@@ -102,7 +110,9 @@ async def login_code(identifier: str) -> str:
 
 
 async def get_groups(connector: wa.WhatsAppConnected):
-    return await connector.get_dialogs(filter=filter_whatsapp_group)
+    return await connector.get_dialogs(
+        filter=lambda x: filter_whatsapp_group(x) and filter_whatsapp_status_bradcast(x)
+    )
 
 
 async def send_text(
