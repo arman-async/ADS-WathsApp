@@ -314,8 +314,10 @@ async def send_message_prosess(
                 await sleep_stream_message(
                     msg,
                     data.repet_min,
+                    text=
                     f"در حال حاضر {repet_round_now} دور پیام ارسال کردیم"
                     + "\n"
                     + "دور بعدی ارسال پیام ",
+                    reply_markup=ui.cancel()
                 )
     await msg.edit_text(strings.Messages.Send_Prosess_End)
