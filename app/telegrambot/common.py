@@ -225,7 +225,10 @@ async def send_message_prosess(
 ):
 
     async def is_trminat() -> bool:
-        if (await state.get_state()) is states.SendMessage.RUNING:
+        _ = (await state.get_state())
+        print(_)
+        breakpoint()
+        if _ is states.SendMessage.RUNING:
             return False
         return True
 
