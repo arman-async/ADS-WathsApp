@@ -349,12 +349,12 @@ async def continuous_message_sending(
             return True
         return False
 
-    async def get_random_chat() -> nio.MatrixRoom:
+    async def get_random_chat() -> nio.MatrixRoom | None:
         async with get_connector(update) as connector:
             all_groups, _ = await wa_service.get_groups(connector)
             dilog = choice(all_groups)
             return connector.client.rooms.get(dilog.room_id)
-        
+
     async def get_random_message() -> Message:
         messages = (await state.get_data()).get("messages")
         return choice(messages)
@@ -364,8 +364,15 @@ async def continuous_message_sending(
         if await check_termination():
             await msg.edit_text(strings.Messages.Canceled)
             return
+        
         chat = await get_random_chat()
+        if chat is None:
+            continue
+        
         message = await get_random_message()
+        if not isinstance(message, Message):
+            continue
+        
         async with get_connector(update) as connector:
             await send_message(connector, chat, message, update.bot)
             counter_sent_message += 1
