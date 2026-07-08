@@ -292,6 +292,7 @@ async def send_message_prosess(
                         )
                         + "\n\n"
                         + strings.Messages.Wait,
+                        reply_markup=ui.cancel(),
                     )
                 await sleep_stream_message(
                     msg,
@@ -306,6 +307,7 @@ async def send_message_prosess(
                     )
                     + "\n\n"
                     + strings.Messages.Wait,
+                    reply_markup=ui.cancel(),
                 )
             if await is_trminat():
                 await msg.edit_text("متوقف شد")
