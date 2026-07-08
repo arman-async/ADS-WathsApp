@@ -351,9 +351,10 @@ async def continuous_message_sending(
 
     async def get_random_chat() -> nio.MatrixRoom:
         async with get_connector(update) as connector:
-            all_groups = await wa_service.get_groups(connector)
-            return choice(all_groups)
-
+            all_groups, _ = await wa_service.get_groups(connector)
+            dilog = choice(all_groups)
+            return connector.client.rooms.get(dilog.room_id)
+        
     async def get_random_message() -> Message:
         messages = (await state.get_data()).get("messages")
         return choice(messages)
