@@ -9,7 +9,7 @@ import nio
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
-
+from app.core.logging import logger
 _last_sync_contacts = 0.0
 _interval_sync_contacts = 120
 
@@ -58,11 +58,17 @@ async def build_connector(
         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
         identifier=identifier,
     )
-    ws = await ws.login()
-    client = await ws.connect()
     try:
+        ws = await ws.login()
+        client = await ws.connect()
+    except Exception as e:
+        logger.error(f"build WatsApp connector failed: {identifier} - {e}")
+        return None
+    try:
+        logger.info(f"build WatsApp connector success: {identifier}")
         yield client
     finally:
+        logger.info(f"WatsApp connector closed: {identifier}")
         await ws.close()
 
 
