@@ -140,7 +140,9 @@ async def select_contecs(
     if not isinstance(account, Identifier):
         logger.warning(f"User {chat_id} is not regestered-WA in")
         return await message.answer(strings.Messages.First_Login)
-
+    
+    await wait_message(message, 75, text=strings.Messages.Wait)
+    print("wait message is working ...")
     async with get_connector(update) as connector:
         await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
         await services.whatsapp.sync_contacts(connector)
@@ -203,7 +205,15 @@ async def send_message(
     caption = message.caption or ""
     await wa_service.send_media(connector, room, cache_path, caption)
 
+async def wait_message(
+    message: Message,
+    wait: int,
+    text: str,
+    reply_markup: InlineKeyboardMarkup = None,
 
+):
+    await asyncio.to_thread(lambda: sleep_stream_message(message, wait, reply_markup, text))
+    
 async def sleep_stream_message(
     message: Message,
     sleep_time: int,
