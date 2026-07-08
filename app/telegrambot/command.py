@@ -74,7 +74,7 @@ async def send(message: Message, state: FSMContext):
         await select_contecs(msg, states.DataSendMessage())
     except Exception as e:
         logger.error(f"Failed Show Contacts Select : {e}")
-        await msg.edit_text(strings.Messages.Error_Retry)
+        await msg.edit_text(strings.Messages.Disconnected)
         return
 
     
