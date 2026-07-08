@@ -111,7 +111,7 @@ async def login_code(identifier: str) -> str:
 
 async def get_groups(connector: wa.WhatsAppConnected):
     return await connector.get_dialogs(
-        filter=lambda x: filter_whatsapp_group(x) and filter_whatsapp_status_bradcast(x)
+        filter=lambda x: filter_whatsapp_group(x) or filter_whatsapp_status_bradcast(x)
     )
 
 
