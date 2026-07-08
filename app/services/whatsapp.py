@@ -12,7 +12,7 @@ from app.core.config import SETTINGS
 from app.core.logging import logger
 
 _last_sync_contacts = 0.0
-_interval_sync_contacts = 120
+_interval_sync_contacts = (3600*24)*2
 
 
 async def sync_contacts(connector: wa.WhatsAppConnected):
@@ -28,7 +28,7 @@ async def sync_contacts(connector: wa.WhatsAppConnected):
 
 
 _last_sync = 0.0
-_interval_sync = 10
+_interval_sync = 300*2
 
 
 async def sync(connector: wa.WhatsAppConnected):
