@@ -130,7 +130,7 @@ async def get_connector(
 async def select_contecs(
     update: Union[Message, CallbackQuery],
     state_data: states.DataSendMessage,
-    page_size: int = 1,
+    page_size: int = 5,
 ):
     message, chat_id = get_chat_context(update)
 
