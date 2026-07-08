@@ -246,7 +246,7 @@ async def send_message_prosess(
             
         if not chat_list:
             await msg.edit_text(strings.Messages.Error_Retry + "\n" + "لیست چت خالی است")
-        
+            return 
         for do, chat in enumerate(chat_list, start=1):
             for do_msg, message in enumerate(data.messages, start=1):
                 await msg.edit_text(
