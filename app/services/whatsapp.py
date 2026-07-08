@@ -63,8 +63,8 @@ async def build_connector(
         client = await ws.connect()
     except Exception as e:
         logger.error(f"build WatsApp connector failed: {identifier} - {e}")
-        return None
-    try:
+        yield None
+    else:
         logger.info(f"build WatsApp connector success: {identifier}")
         yield client
     finally:
