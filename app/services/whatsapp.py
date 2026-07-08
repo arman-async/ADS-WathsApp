@@ -1,7 +1,6 @@
 import time
 from asyncio import sleep
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -13,34 +12,8 @@ from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
 from app.core.logging import logger
 
-_last_sync_contacts = 0.0
-_interval_sync_contacts = (3600 * 24) * 2
-
-
-async def sync_contacts(connector: wa.WhatsAppConnected):
-    global _last_sync_contacts
-    if time.time() - _last_sync_contacts < _interval_sync_contacts:
-        return
-    await connector.sync()
-    for s in ("group", "groups", "contacts"):
-        await connector.send_text(await connector.bot_room(), f"!wa sync {s}")
-
-    await connector.accept_invites()
-    _last_sync_contacts = time.time()
-
-
-_last_sync = 0.0
-_interval_sync = 300 * 2
-
-
-async def sync(connector: wa.WhatsAppConnected):
-    global _last_sync
-    if time.time() - _last_sync < _interval_sync:
-        return
-
-    await sync_contacts(connector)
-    await connector.sync()
-    _last_sync = time.time()
+INTERVAL_SYNC = 3600
+INTERVAL_SYNC_CONTACTS = 3600 * 24
 
 
 def filter_whatsapp_group(room: nio.MatrixRoom) -> bool:
@@ -58,60 +31,23 @@ def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
     return False
 
 
-@dataclass
-class ConnctorCached:
-    cleint: wa.WhatsAppConnected
-    lock: bool = False
+@alru_cache(ttl=INTERVAL_SYNC_CONTACTS)
+async def sync_contacts(connector: wa.WhatsAppConnected):
+
+    await connector.sync()
+    for s in ("group", "groups", "contacts"):
+        await connector.send_text(await connector.bot_room(), f"!wa sync {s}")
+
+    await connector.accept_invites()
 
 
-class WhatsAppConnectorManager:
-    def __init__(self):
-        self._cache: dict[str, dict[int, ConnctorCached]] = {}
-
-    def _get_next_index(self, identifier: str) -> int:
-        indices = self._cache.get(identifier, {}).keys()
-        return max(indices) + 1 if indices else 0
-
-    async def get_connector(self, identifier: str) -> ConnctorCached | None:
-        if identifier not in self._cache:
-            return None
-
-        for index, connector in self._cache[identifier].items():
-            if connector.lock:
-                continue
-            try:
-                connector = await connector.cleint.is_connected()
-            except Exception as e:
-                logger.error(f"Connector check failed: {e}")
-                del self._cache[identifier][index]
-
-            connector.lock = True
-            return connector
-        return None
-
-    async def free_connector(self, identifier: str, connector: ConnctorCached) -> None:
-        if identifier not in self._cache:
-            self._cache[identifier] = {}
-
-        index = self._get_next_index(identifier)
-        connector.lock = False
-        self._cache[identifier][index] = connector
-
-    async def set_connector(
-        self, identifier: str, client: wa.WhatsAppConnected
-    ) -> None:
-        if identifier not in self._cache:
-            self._cache[identifier] = {}
-
-        index = self._get_next_index(identifier)
-        self._cache[identifier][index] = ConnctorCached(lock=True, cleint=client)
-
-
-_WATSAPP_CONNECTOR_MANAGER = WhatsAppConnectorManager()
+@alru_cache(ttl=INTERVAL_SYNC)
+async def sync(connector: wa.WhatsAppConnected):
+    await connector.sync()
 
 
 @alru_cache()
-async def get_connctor(identifier: str) -> wa.WhatsAppConnected | None:
+async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
     start_time = time.perf_counter()
     logger.info(f"Building new WhatsApp connector: {identifier}")
     ws = wa.WhatsAppInit(
@@ -136,47 +72,10 @@ async def get_connctor(identifier: str) -> wa.WhatsAppConnected | None:
 
 
 @asynccontextmanager
-async def build_connector(
+async def get_connector(
     identifier: str,
 ) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
-    yield await get_connctor(identifier)
-    # start_time = time.perf_counter()
-    # in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
-    # print(f"in_cache: {in_cache}")
-    # if in_cache:
-    #     duration = time.perf_counter() - start_time
-    #     logger.debug(
-    #         f"Connector retrieved from cache: {identifier} | duration={duration:.4f}s"
-    #     )
-    #     try:
-    #         yield in_cache.cleint
-    #     finally:
-    #         await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
-    #     return
-
-    # logger.info(f"Building new WhatsApp connector: {identifier}")
-    # ws = wa.WhatsAppInit(
-    #     username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-    #     password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-    #     homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-    #     identifier=identifier,
-    # )
-
-    # try:
-    #     ws = await ws.login()
-    #     client = await ws.connect()
-    #     duration = time.perf_counter() - start_time
-    #     logger.info(
-    #         f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
-    #     )
-    #     await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
-    #     try:
-    #         yield client
-    #     finally:
-    #         await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
-    # except Exception as e:
-    #     logger.error(f"Connector initialization failed: {identifier} | error={e}")
-    #     raise e
+    yield await builder_connctor(identifier)
 
 
 async def login_code(identifier: str) -> str:
@@ -208,6 +107,7 @@ async def login_code(identifier: str) -> str:
     return await ws.login()  # get code
 
 
+@alru_cache(ttl=3600)
 async def get_groups(connector: wa.WhatsAppConnected):
     return await connector.get_dialogs(
         filter=lambda x: filter_whatsapp_group(x) or filter_whatsapp_status_bradcast(x)
