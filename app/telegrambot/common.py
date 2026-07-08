@@ -212,7 +212,7 @@ async def wait_message(
     reply_markup: InlineKeyboardMarkup = None,
 
 ):
-    await asyncio.to_thread(lambda: sleep_stream_message(message, wait, reply_markup, text))
+    await asyncio.create_task(sleep_stream_message(message, wait, reply_markup, text))
     
 async def sleep_stream_message(
     message: Message,
@@ -224,8 +224,7 @@ async def sleep_stream_message(
         await asyncio.sleep(1)
         try:
             await message.edit_text(f"{text} {sec}/{sleep_time}", reply_markup=reply_markup)
-            # if reply_markup:
-            #     await message.edit_reply_markup(reply_markup=reply_markup)
+
         except TelegramBadRequest:
             pass
 
