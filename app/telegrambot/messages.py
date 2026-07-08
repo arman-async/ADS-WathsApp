@@ -32,7 +32,7 @@ async def resiver_messages(message: Message, state: FSMContext):
 
 @DP.message(states.ContinuousMessageSending.RESIVE)
 async def resiver_messages_contin(message: Message, state: FSMContext):
-    messages: list[Message] = (await state.get_data()).get("messages")
+    messages: list[Message] = (await state.get_data()).get("messages", list())
     if (not utils.extract_file_id(message)) and (not message.text):
         logger.info(f"Drapped message: {message.message_id}")
         await message.delete()
