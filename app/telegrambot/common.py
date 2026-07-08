@@ -1,6 +1,7 @@
 import asyncio
 import math
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
@@ -206,19 +207,31 @@ async def send_message(
 
 async def sleep_stream_message(
     message: Message,
-    sleep_time: int,
+    sleep_time: float,
     reply_markup: InlineKeyboardMarkup = None,
     text: str = "",
+    update_interval: float = 1.0,
 ):
-    for sec in range(1, sleep_time + 1):
-        await asyncio.sleep(1)
+    start_time = time.perf_counter()
+
+    while True:
+        elapsed = time.perf_counter() - start_time
+        remaining = sleep_time - elapsed
+
+        if remaining <= 0:
+            break
+
+        current_display = min(sleep_time, elapsed)
+
         try:
             await message.edit_text(
-                f"{text} {sec}/{sleep_time}", reply_markup=reply_markup
+                f"{text} {current_display:.1f}/{sleep_time:.1f}",
+                reply_markup=reply_markup,
             )
-
         except TelegramBadRequest:
             pass
+
+        await asyncio.sleep(update_interval)
 
 
 async def send_message_prosess(
@@ -364,15 +377,15 @@ async def continuous_message_sending(
         if await check_termination():
             await msg.edit_text(strings.Messages.Canceled)
             return
-        
+
         chat = await get_random_chat()
         if chat is None:
             continue
-        
+
         message = await get_random_message()
         if not isinstance(message, Message):
             continue
-        
+
         async with get_connector(update) as connector:
             await send_message(connector, chat, message, update.bot)
             counter_sent_message += 1
