@@ -140,9 +140,8 @@ async def select_contecs(
     if not isinstance(account, Identifier):
         logger.warning(f"User {chat_id} is not regestered-WA in")
         return await message.answer(strings.Messages.First_Login)
-    
-    await wait_message(message, 75, text=strings.Messages.Wait)
-    print("wait message is working ...")
+
+    await message.edit_text(strings.Messages.Wait)
     async with get_connector(update) as connector:
         await message.edit_text(strings.Messages.Syncing + "\n" + strings.Messages.Wait)
         await services.whatsapp.sync_contacts(connector)
@@ -205,15 +204,7 @@ async def send_message(
     caption = message.caption or ""
     await wa_service.send_media(connector, room, cache_path, caption)
 
-async def wait_message(
-    message: Message,
-    wait: int,
-    text: str,
-    reply_markup: InlineKeyboardMarkup = None,
 
-):
-    await asyncio.create_task(sleep_stream_message(message, wait, reply_markup, text))
-    
 async def sleep_stream_message(
     message: Message,
     sleep_time: int,
@@ -223,7 +214,9 @@ async def sleep_stream_message(
     for sec in range(1, sleep_time + 1):
         await asyncio.sleep(1)
         try:
-            await message.edit_text(f"{text} {sec}/{sleep_time}", reply_markup=reply_markup)
+            await message.edit_text(
+                f"{text} {sec}/{sleep_time}", reply_markup=reply_markup
+            )
 
         except TelegramBadRequest:
             pass
@@ -325,10 +318,9 @@ async def send_message_prosess(
                 await sleep_stream_message(
                     msg,
                     data.repet_min,
-                    text=
-                    f"در حال حاضر {repet_round_now} دور پیام ارسال کردیم"
+                    text=f"در حال حاضر {repet_round_now} دور پیام ارسال کردیم"
                     + "\n"
                     + "دور بعدی ارسال پیام ",
-                    reply_markup=ui.cancel()
+                    reply_markup=ui.cancel(),
                 )
     await msg.edit_text(strings.Messages.Send_Prosess_End)
