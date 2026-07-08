@@ -116,14 +116,14 @@ async def build_connector(
 ) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
     start_time = time.perf_counter()
     in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
-
+    print(f"in_cache: {in_cache}")
     if in_cache:
         duration = time.perf_counter() - start_time
         logger.debug(
             f"Connector retrieved from cache: {identifier} | duration={duration:.4f}s"
         )
         try:
-            yield in_cache.client
+            yield in_cache.cleint
         finally:
             await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
         return
@@ -143,7 +143,7 @@ async def build_connector(
         logger.info(
             f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
         )
-
+        await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
         try:
             yield client
         finally:
