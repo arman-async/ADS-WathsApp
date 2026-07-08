@@ -5,14 +5,14 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import nio
-
+from dataclasses import dataclass
 from app.connctor import whatsapp as wa
 from app.connctor.utils import MatrixUserManager, WhatsAppUser
 from app.core.config import SETTINGS
 from app.core.logging import logger
 
 _last_sync_contacts = 0.0
-_interval_sync_contacts = (3600*24)*2
+_interval_sync_contacts = (3600 * 24) * 2
 
 
 async def sync_contacts(connector: wa.WhatsAppConnected):
@@ -28,7 +28,7 @@ async def sync_contacts(connector: wa.WhatsAppConnected):
 
 
 _last_sync = 0.0
-_interval_sync = 300*2
+_interval_sync = 300 * 2
 
 
 async def sync(connector: wa.WhatsAppConnected):
@@ -55,31 +55,124 @@ def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
         return True
     return False
 
-# _cache_connctor : dict[str, dict[int, wa.WhatsAppConnected]]
+
+@dataclass
+class ConnctorCached:
+    lock: bool = False
+    cleint: wa.WhatsAppConnected
+
+
+_CACHE_CONNCTOR: dict[str, dict[int, ConnctorCached]] = {}
+
+
+async def _get_connctor_in_cache(identifier: str) -> ConnctorCached:
+    global _CACHE_CONNCTOR
+    in_cache = _CACHE_CONNCTOR.get(identifier, dict())
+    for index, connctor in in_cache.items():
+        try:
+            is_connected = await connctor.cleint.is_connected()
+        except Exception as e:
+            logger.error(f"Conctor Filed: {e}")
+            del is_connected[index]
+        if is_connected:
+            connctor.lock = True
+            return connctor
+
+
+async def _free_connctor_in_cache(identifier: str, c_cache: ConnctorCached) -> None:
+    global _CACHE_CONNCTOR
+    last_index = max(_CACHE_CONNCTOR.get(identifier, dict()).keys())
+    last_index += 1
+    c_cache.lock = False
+    _CACHE_CONNCTOR[identifier][last_index] = c_cache
+
+
+async def _set_connctor_in_cache(
+    identifier: str, connctor: wa.WhatsAppConnected
+) -> None:
+    global _CACHE_CONNCTOR
+    last_index = max(_CACHE_CONNCTOR.get(identifier, dict()).keys())
+    last_index += 1
+    _CACHE_CONNCTOR[identifier][last_index] = ConnctorCached(lock=True, cleint=connctor)
+
+
+
+class WhatsAppConnectorManager:
+    def __init__(self):
+        self._cache: dict[str, dict[int, ConnctorCached]] = {}
+
+    def _get_next_index(self, identifier: str) -> int:
+        indices = self._cache.get(identifier, {}).keys()
+        return max(indices) + 1 if indices else 0
+
+    async def get_connector(self, identifier: str) -> ConnctorCached | None:
+        if identifier not in self._cache:
+            return None
+
+        for index, connector in self._cache[identifier].items():
+            if connector.lock:
+                continue
+            try:
+                connector = await connector.cleint.is_connected()
+            except Exception as e:
+                logger.error(f"Connector check failed: {e}")
+                del self._cache[identifier][index]
+            
+            connector.lock = True
+            return connector
+        return None
+
+    async def free_connector(self, identifier: str, connector: ConnctorCached) -> None:
+        if identifier not in self._cache:
+            self._cache[identifier] = {}
+        
+        index = self._get_next_index(identifier)
+        connector.lock = False
+        self._cache[identifier][index] = connector
+
+    async def set_connector(self, identifier: str, client: wa.WhatsAppConnected) -> None:
+        if identifier not in self._cache:
+            self._cache[identifier] = {}
+        
+        index = self._get_next_index(identifier)
+        self._cache[identifier][index] = ConnctorCached(lock=True, cleint=client)
+
+_WATSAPP_CONNECTOR_MANAGER = WhatsAppConnectorManager()
+
 @asynccontextmanager
 async def build_connector(
     identifier: str,
 ) -> AsyncGenerator[wa.WhatsAppConnected | None, None]:
+    in_cache = await _WATSAPP_CONNECTOR_MANAGER.get_connector(identifier)
+    if in_cache:
+        try:
+            yield in_cache.cleint
+        finally:
+            await _WATSAPP_CONNECTOR_MANAGER.free_connector(identifier, in_cache)
+        return
+    
     ws = wa.WhatsAppInit(
-        username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-        password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-        homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-        identifier=identifier,
-    )
-    logger.info(f"build WatsApp connector start: {identifier}")
+            username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+            password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
+            homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
+            identifier=identifier,
+        )
     try:
-        ws = await ws.login()
-        client = await ws.connect()
+        
+        logger.info(f"build WatsApp connector start: {identifier}")
+        try:
+            ws = await ws.login()
+            client = await ws.connect()
+        except Exception as e:
+            logger.error(f"build WatsApp connector failed: {identifier} - {e}")
+            yield None
+        else:
+            logger.info(f"build WatsApp connector success: {identifier}")
+            yield client
+            await _WATSAPP_CONNECTOR_MANAGER.set_connector(identifier, client)
     except Exception as e:
-        logger.error(f"build WatsApp connector failed: {identifier} - {e}")
-        yield None
-    else:
-        logger.info(f"build WatsApp connector success: {identifier}")
-        yield client
-    finally:
-        logger.info(f"WatsApp connector closed: {identifier}")
-        await ws.close()
-
+        logger.critical(f"build WatsApp connector failed: {identifier} - {e}")
+        raise e
 
 async def login_code(identifier: str) -> str:
     admin_token = await MatrixUserManager.get_token(
