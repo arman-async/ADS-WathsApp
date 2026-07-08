@@ -59,42 +59,9 @@ def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
 
 @dataclass
 class ConnctorCached:
-    lock: bool = False
     cleint: wa.WhatsAppConnected
-
-
-_CACHE_CONNCTOR: dict[str, dict[int, ConnctorCached]] = {}
-
-
-async def _get_connctor_in_cache(identifier: str) -> ConnctorCached:
-    global _CACHE_CONNCTOR
-    in_cache = _CACHE_CONNCTOR.get(identifier, dict())
-    for index, connctor in in_cache.items():
-        try:
-            is_connected = await connctor.cleint.is_connected()
-        except Exception as e:
-            logger.error(f"Conctor Filed: {e}")
-            del is_connected[index]
-        if is_connected:
-            connctor.lock = True
-            return connctor
-
-
-async def _free_connctor_in_cache(identifier: str, c_cache: ConnctorCached) -> None:
-    global _CACHE_CONNCTOR
-    last_index = max(_CACHE_CONNCTOR.get(identifier, dict()).keys())
-    last_index += 1
-    c_cache.lock = False
-    _CACHE_CONNCTOR[identifier][last_index] = c_cache
-
-
-async def _set_connctor_in_cache(
-    identifier: str, connctor: wa.WhatsAppConnected
-) -> None:
-    global _CACHE_CONNCTOR
-    last_index = max(_CACHE_CONNCTOR.get(identifier, dict()).keys())
-    last_index += 1
-    _CACHE_CONNCTOR[identifier][last_index] = ConnctorCached(lock=True, cleint=connctor)
+    lock: bool = False
+    
 
 
 class WhatsAppConnectorManager:
