@@ -210,7 +210,7 @@ async def sleep_stream_message(
     sleep_time: float,
     reply_markup: InlineKeyboardMarkup = None,
     text: str = "",
-    update_interval: float = 1.0,
+    update_interval: float = 2.5,
 ):
     start_time = time.perf_counter()
 
