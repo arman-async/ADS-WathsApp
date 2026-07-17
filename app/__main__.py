@@ -20,7 +20,7 @@ async def main() -> None:
 
     logger.info("Starting bot polling")
     try:
-        await DP.start_polling(BOT)
+        await DP.start_polling(BOT, polling_timeout=60, handle_signals=True)
     except Exception as e:
         logger.critical(f"Bot failed to start: {e}", exc_info=True)
     finally:
