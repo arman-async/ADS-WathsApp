@@ -10,7 +10,12 @@ from typing import AsyncGenerator, Union
 
 import nio
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import (
+    TelegramBadRequest,
+    TelegramNetworkError,
+    TelegramRetryAfter,
+    TelegramServerError,
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
@@ -208,16 +213,16 @@ async def send_message(
 async def sleep_stream_message(
     message: Message,
     sleep_time: float,
-    reply_markup: InlineKeyboardMarkup = None,
+    reply_markup: InlineKeyboardMarkup | None = None,
     text: str = "",
-    update_interval: float = 2.5,
+    max_refresh_in_min: int = 10,
 ):
-    start_time = time.perf_counter()
+    start_time: float = time.perf_counter()
+    interval_refresh = 60.0 / float(max_refresh_in_min)
 
     while True:
         elapsed = time.perf_counter() - start_time
         remaining = sleep_time - elapsed
-
         if remaining <= 0:
             break
 
@@ -228,10 +233,70 @@ async def sleep_stream_message(
                 f"{text} {current_display:.1f}/{sleep_time:.1f}",
                 reply_markup=reply_markup,
             )
-        except TelegramBadRequest:
-            pass
 
-        await asyncio.sleep(update_interval)
+        except TelegramRetryAfter as e:
+            wait = e.retry_after + 1
+            logger.warning(f"Telegram rate limit - sleep {wait}s")
+            await asyncio.sleep(wait)
+            continue
+        except TelegramBadRequest as e:
+            if "message is not modified" in str(e):
+                logger.debug("Message unchanged - skipping edit")
+            else:
+                logger.warning(f"BadRequest while editing: {e}")
+            await asyncio.sleep(interval_refresh)
+            continue
+        except (TelegramServerError, TelegramNetworkError) as e:
+            backoff = min(10, 2 ** (getattr(e, "try_count", 0) or 0))
+            logger.warning(f"Server error {e} → retry in {backoff}s")
+            await asyncio.sleep(backoff)
+            continue
+        except Exception as e:
+            logger.exception(f"Unexpected error while editing message: {e}")
+            await asyncio.sleep(interval_refresh)
+            continue
+
+        await asyncio.sleep(interval_refresh)
+
+    try:
+        await message.edit_text(
+            f"{text} 100.0/{sleep_time:.1f}",
+            reply_markup=reply_markup,
+        )
+    except Exception as e:
+        logger.error(f"Final edit failed: {e}")
+
+
+# async def sleep_stream_message(
+#     message: Message,
+#     sleep_time: float,
+#     reply_markup: InlineKeyboardMarkup | None = None,
+#     text: str = "",
+#     update_interval: float = 2.5,
+# ):
+#     start_time: float = time.perf_counter()
+#     await asyncio.sleep(update_interval)
+#     while True:
+#         elapsed: float = time.perf_counter() - start_time
+#         remaining: float = sleep_time - elapsed
+
+#         if remaining <= 0:
+#             break
+
+#         current_display: float = min(sleep_time, elapsed)
+
+#         try:
+#             await message.edit_text(
+#                 f"{text} {current_display:.1f}/{sleep_time:.1f}",
+#                 reply_markup=reply_markup,
+#             )
+#         except TelegramRetryAfter as e:
+#             sleep_retry: float = update_interval * 5
+#             logger.warning(f"Telegram Error: {e}")
+#             logger.warning(f"Telegram rate limit exceeded. Sleeping... [{sleep_retry}]")
+#             await asyncio.sleep(sleep_retry)
+
+#         await asyncio.sleep(update_interval)
 
 
 async def send_message_prosess(
