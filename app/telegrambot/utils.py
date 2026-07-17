@@ -3,29 +3,29 @@ from typing import Tuple, Union
 from aiogram.enums import ContentType
 from aiogram.types import CallbackQuery, Message
 
-
 def get_chat_context(update: Union[Message, CallbackQuery]) -> Tuple[Message, int]:
     if isinstance(update, CallbackQuery):
-        return update.message, update.from_user.id
+        return update.message, update.from_user.id # type: ignore
     return update, update.chat.id
 
 
-def extract_file_id(message: Message) -> str|None:
-    match message.content_type:
+def extract_file_id(message: Message) -> str | None:
+    match message.content_type: # type: ignore
         case ContentType.PHOTO:
-            return message.photo[-1].file_id
+            return message.photo[-1].file_id # type: ignore
         case ContentType.VIDEO:
-            return message.video.file_id
+            return message.video.file_id # type: ignore
         case ContentType.AUDIO:
-            return message.audio.file_id
+            return message.audio.file_id # type: ignore
         case ContentType.VOICE:
-            return message.voice.file_id
+            return message.voice.file_id # type: ignore
         case ContentType.DOCUMENT:
-            return message.document.file_id
+            return message.document.file_id # type: ignore
     return None
 
-def get_extension_file(message: Message)-> str:
-    match message.content_type:
+
+def get_extension_file(message: Message) -> str:
+    match message.content_type: # type: ignore
         case ContentType.PHOTO:
             return ".jpg"
         case ContentType.VIDEO:
