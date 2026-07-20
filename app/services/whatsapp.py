@@ -155,9 +155,9 @@ async def send_text(
 async def send_media(
     connector: wa.WhatsAppConnected, room: nio.MatrixRoom, file: Path, caption: str
 ):
-    media = await connector.send_media(room.room_id, file)
-    text = None
-    if caption:
-        text = await send_text(connector, room, caption)
+    caption = caption or ""
+    await connector.send_media(room.room_id, file, caption=caption)
+    # text = None
+    # if caption:
+    #     text = await send_text(connector, room, caption)
 
-    return (media, text)
