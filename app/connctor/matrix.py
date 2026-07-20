@@ -202,6 +202,7 @@ class MatrixLoggedIn:
         room_id: RoomID,
         file: Path,
         reply_to: Optional[str] = None,
+        caption: str = "",
     ) -> nio.RoomSendResponse | nio.RoomSendError:
 
         mime_type = magic.from_file(file, mime=True)
@@ -209,7 +210,8 @@ class MatrixLoggedIn:
         mxc_uri = await self._upload_media(file)
 
         content = {
-            "body": os.path.basename(file),
+            "body": caption,
+            "filename": os.path.basename(file),
             "m.relates_to": {"rel_type": "m.replace", "event_id": reply_to},
             "info": {
                 "size": file_stat.st_size,
