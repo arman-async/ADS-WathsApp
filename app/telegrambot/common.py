@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
 from random import choice, choices, randint, uniform
-from typing import AsyncGenerator, Union
+from typing import AsyncGenerator, Awaitable, Callable, Union
 
 import nio
 from aiogram import Bot
@@ -216,11 +216,16 @@ async def sleep_stream_message(
     reply_markup: InlineKeyboardMarkup | None = None,
     text: str = "",
     max_refresh_in_min: int = 10,
+    check_stop: Callable[[], Awaitable[bool]] | None = None,
 ):
     start_time: float = time.perf_counter()
     interval_refresh = 60.0 / float(max_refresh_in_min)
     logger.info(f"sleep {sleep_time} in {max_refresh_in_min} min's")
     while True:
+        if check_stop:
+            if await check_stop():
+                break
+
         elapsed = time.perf_counter() - start_time
         remaining = sleep_time - elapsed
         if remaining <= 0:
@@ -254,6 +259,9 @@ async def sleep_stream_message(
             await asyncio.sleep(interval_refresh)
             continue
 
+        if check_stop:
+            if await check_stop():
+                break
         await asyncio.sleep(interval_refresh)
 
     try:
@@ -273,6 +281,12 @@ async def send_message_prosess(
         if (await state.get_state()) == states.SendMessage.RUNING:
             return False
         return True
+
+    async def trminat_log():
+        try:
+            await msg.edit_text("متوقف شد")
+        except TelegramRetryAfter as e:
+            logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
 
     data: states.DataSendMessage = (await state.get_data()).get("data")
     msg, _ = get_chat_context(update)
@@ -304,12 +318,8 @@ async def send_message_prosess(
         repet_round = 5 if data.repet_min else 1
         for repet_round_now in range(1, repet_round + 1):
             if await is_trminat():
-                await msg.edit_text("متوقف شد")
-                return
-            chat_list = [
-                connector.client.rooms.get(choice(all_groups).room_id)
-                for _ in range(int(len(all_groups) / 2))
-            ]
+                return await trminat_log()
+
             for do, chat in enumerate(chat_list, start=1):
                 for do_msg, message in enumerate(data.messages, start=1):
                     try:
@@ -328,13 +338,7 @@ async def send_message_prosess(
                         continue
                     await send_message(connector, chat, message, update.bot)
                     if await is_trminat():
-                        try:
-                            await msg.edit_text("متوقف شد")
-                        except TelegramRetryAfter as e:
-                            logger.warning(
-                                f"Telegram rate limit - sleep {e.retry_after}/s"
-                            )
-                        return
+                        return await trminat_log()
                     await sleep_stream_message(
                         msg,
                         data.interval_mode.send_message,
@@ -347,6 +351,7 @@ async def send_message_prosess(
                         + "\n\n"
                         + strings.Messages.Wait,
                         reply_markup=ui.cancel(),
+                        check_stop=is_trminat,
                     )
                 await sleep_stream_message(
                     msg,
@@ -362,6 +367,7 @@ async def send_message_prosess(
                     + "\n\n"
                     + strings.Messages.Wait,
                     reply_markup=ui.cancel(),
+                    check_stop=is_trminat,
                 )
             if await is_trminat():
                 try:
@@ -377,6 +383,7 @@ async def send_message_prosess(
                     + "\n"
                     + "دور بعدی ارسال پیام ",
                     reply_markup=ui.cancel(),
+                    check_stop=is_trminat,
                 )
     await msg.edit_text(strings.Messages.Send_Prosess_End)
 
@@ -441,4 +448,5 @@ async def continuous_message_sending(
             + "\n"
             + strings.Messages.Wait,
             reply_markup=ui.cancel(),
+            check_stop=check_termination,
         )
