@@ -217,6 +217,7 @@ async def sleep_stream_message(
     text: str = "",
     max_refresh_in_min: int = 10,
     check_stop: Callable[[], Awaitable[bool]] | None = None,
+    msg_stop:str=strings.Messages.Canceled,
 ):
     start_time: float = time.perf_counter()
     interval_refresh = 60.0 / float(max_refresh_in_min)
@@ -224,6 +225,10 @@ async def sleep_stream_message(
     while True:
         if check_stop:
             if await check_stop():
+                try:
+                    await message.edit_text(msg_stop, reply_markup=reply_markup)
+                except TelegramRetryAfter as e:
+                    logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
                 break
 
         elapsed = time.perf_counter() - start_time
@@ -264,21 +269,16 @@ async def sleep_stream_message(
                 break
         await asyncio.sleep(interval_refresh)
 
-    try:
-        await message.edit_text(
-            f"{text} 100.0/{sleep_time:.1f}",
-            reply_markup=reply_markup,
-        )
-    except Exception as e:
-        logger.error(f"Final edit failed: {e}")
-
 
 async def send_message_prosess(
     update: Union[Message, CallbackQuery], state: FSMContext
 ):
 
     async def is_trminat() -> bool:
-        if (await state.get_state()) == states.SendMessage.RUNING:
+        s = await state.get_state()
+        if not s:
+            return True
+        if  s == states.SendMessage.RUNING:
             return False
         return True
 
@@ -408,6 +408,8 @@ async def continuous_message_sending(
 
     async def check_termination() -> bool:
         run_state = await state.get_state()
+        if not run_state:
+            return True
         if run_state == states.ContinuousMessageSending.STOP:
             return True
         return False
@@ -439,6 +441,7 @@ async def continuous_message_sending(
         async with get_connector(update) as connector:
             await send_message(connector, chat, message, update.bot)
             counter_sent_message += 1
+
         await sleep_stream_message(
             msg,
             get_interval(),
@@ -449,4 +452,5 @@ async def continuous_message_sending(
             + strings.Messages.Wait,
             reply_markup=ui.cancel(),
             check_stop=check_termination,
+            
         )
