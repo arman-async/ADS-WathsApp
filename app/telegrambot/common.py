@@ -219,7 +219,7 @@ async def sleep_stream_message(
 ):
     start_time: float = time.perf_counter()
     interval_refresh = 60.0 / float(max_refresh_in_min)
-
+    logger.info(f"sleep {sleep_time} in {max_refresh_in_min} min's")
     while True:
         elapsed = time.perf_counter() - start_time
         remaining = sleep_time - elapsed
@@ -235,10 +235,8 @@ async def sleep_stream_message(
             )
 
         except TelegramRetryAfter as e:
-            wait = e.retry_after + 1
-            logger.warning(f"Telegram rate limit - sleep {wait}s")
-            await asyncio.sleep(wait)
-            continue
+            logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
+
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 logger.debug("Message unchanged - skipping edit")
@@ -265,38 +263,6 @@ async def sleep_stream_message(
         )
     except Exception as e:
         logger.error(f"Final edit failed: {e}")
-
-
-# async def sleep_stream_message(
-#     message: Message,
-#     sleep_time: float,
-#     reply_markup: InlineKeyboardMarkup | None = None,
-#     text: str = "",
-#     update_interval: float = 2.5,
-# ):
-#     start_time: float = time.perf_counter()
-#     await asyncio.sleep(update_interval)
-#     while True:
-#         elapsed: float = time.perf_counter() - start_time
-#         remaining: float = sleep_time - elapsed
-
-#         if remaining <= 0:
-#             break
-
-#         current_display: float = min(sleep_time, elapsed)
-
-#         try:
-#             await message.edit_text(
-#                 f"{text} {current_display:.1f}/{sleep_time:.1f}",
-#                 reply_markup=reply_markup,
-#             )
-#         except TelegramRetryAfter as e:
-#             sleep_retry: float = update_interval * 5
-#             logger.warning(f"Telegram Error: {e}")
-#             logger.warning(f"Telegram rate limit exceeded. Sleeping... [{sleep_retry}]")
-#             await asyncio.sleep(sleep_retry)
-
-#         await asyncio.sleep(update_interval)
 
 
 async def send_message_prosess(
@@ -346,19 +312,28 @@ async def send_message_prosess(
             ]
             for do, chat in enumerate(chat_list, start=1):
                 for do_msg, message in enumerate(data.messages, start=1):
-                    await msg.edit_text(
-                        strings.Messages.Send_Prosess.format(
-                            sent_chats=do,
-                            total_chats=len(chat_list),
-                            sent_messages_in_chat=do_msg,
-                            total_messages_in_chat=len(data.messages),
+                    try:
+                        await msg.edit_text(
+                            strings.Messages.Send_Prosess.format(
+                                sent_chats=do,
+                                total_chats=len(chat_list),
+                                sent_messages_in_chat=do_msg,
+                                total_messages_in_chat=len(data.messages),
+                            )
                         )
-                    )
+                    except TelegramRetryAfter as e:
+                        logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
+
                     if not isinstance(message, Message):
                         continue
                     await send_message(connector, chat, message, update.bot)
                     if await is_trminat():
-                        await msg.edit_text("متوقف شد")
+                        try:
+                            await msg.edit_text("متوقف شد")
+                        except TelegramRetryAfter as e:
+                            logger.warning(
+                                f"Telegram rate limit - sleep {e.retry_after}/s"
+                            )
                         return
                     await sleep_stream_message(
                         msg,
@@ -389,7 +364,10 @@ async def send_message_prosess(
                     reply_markup=ui.cancel(),
                 )
             if await is_trminat():
-                await msg.edit_text("متوقف شد")
+                try:
+                    await msg.edit_text("متوقف شد")
+                except TelegramRetryAfter as e:
+                    logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
                 return
             if data.repet_min:
                 await sleep_stream_message(
