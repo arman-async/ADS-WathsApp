@@ -5,7 +5,8 @@ from aiogram.types import Message
 from app.core import strings
 from app.core.logging import logger
 from app.db.session import get_db
-from app.services import user, whatsapp
+from app.services import banner, user, whatsapp
+from app.telegrambot import ui
 
 from . import states
 from .client import DP
@@ -86,8 +87,20 @@ async def send(message: Message, state: FSMContext):
 @require_user
 @require_login
 async def send_continuous(message: Message, state: FSMContext):
-    await state.set_state(states.ContinuousMessageSending.RESIVE)
-    await message.answer(strings.Messages.Reseving_Message)
+    message, chat_id = get_chat_context(message)
+    # Show Banner And Temp Methode
+    async with get_db() as session:
+        banners_in_db = await banner.get_banners(session, chat_id)
+    banners = []
+    if banners_in_db:
+        banners = [(b.id, b.name) for b in banners_in_db]
+
+    await message.edit_text(
+        "بنر مورد نظر را انتخاب کنید یا از طریق ارسال مستقیم همین حالا پیام های خود را بفرستید"
+    )
+    await message.edit_reply_markup(
+        reply_markup=ui.choice_banner_or_temp(banners=banners)
+    )
 
 
 @DP.message(states.SendMessage.SEND, Command("confirm"))

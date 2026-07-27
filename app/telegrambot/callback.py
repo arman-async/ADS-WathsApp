@@ -221,7 +221,6 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
     message, _ = get_chat_context(callback)
     await callback.answer(Messages.Wait)
 
-    
     data: states.DataSendMessage = (await state.get_data()).get("data")
     print(data.messages)
     breakpoint()
@@ -284,6 +283,70 @@ async def stop_send_message(callback: CallbackQuery, state: FSMContext):
 
 
 # ===========================================================================================
+# ////////////// Bad Code
+@DP.callback_query(
+    states.ContinuousMessageSending.CHOICE,
+    F.data.startswith(ui.CallbackData.CHOICE_BANNER),
+)
+async def select_banner(callback: CallbackQuery, state: FSMContext):
+    await callback.answer(Messages.Wait)
+    message, chat_id = get_chat_context(callback)
+    # feche Banner
+    banner_id = int(callback.data.split(";")[1])
+    async with get_db() as session:
+        banners_in_db = await services.banner.get_banner(session, banner_id)
+    if not isinstance(banners_in_db, BannerMessages):
+        await message.edit_text("بنر مورد نظر یافت نشد")
+        return
+
+    # Get Banner Messages
+    banner_mesages: list[Message] = []
+    banner_mesages_id: tuple[int] = tuple(
+        int(i) for i in banners_in_db.messages.split(",")
+    )
+    for msg_id in banner_mesages_id:
+        try:
+            msg = await message.bot.forward_message(
+                chat_id=chat_id, from_chat_id=chat_id, message_id=msg_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to forward message: {e}")
+            continue
+        else:
+            banner_mesages.append(msg)
+    if not banner_mesages:
+        await message.edit_text("بنر خالی است")
+        return
+
+    # Succses Message
+    await message.delete()
+    await message.bot.send_message(chat_id=chat_id, text="بنر با موفقیت انتخاب شد")
+
+    # Update State
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+    data.messages = banner_mesages
+    await state.update_data({"data": data})
+    await state.set_state(states.SendMessage.SELECT_INTERVAL)
+
+    # Send Interval Meue
+    message = await message.bot.send_message(
+        chat_id=chat_id, text=Messages.Select_Interval
+    )
+    await message.edit_reply_markup(reply_markup=ui.interval_select())
+
+
+# \\\\\\\\\\\\\ Bad Code
+
+
+@DP.callback_query(
+    states.ContinuousMessageSending.CHOICE,
+    F.data.startswith(ui.CallbackData.RESEVE_DIRECT_MESSAGE),
+)
+async def start_message_resevier(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+    await state.set_state(states.ContinuousMessageSending.RESIVE)
+    await message.edit_text(Messages.Reseving_Message)
 
 
 @DP.callback_query(

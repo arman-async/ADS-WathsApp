@@ -50,6 +50,7 @@ class LoginWhatsapp(StatesGroup):
 
 
 class ContinuousMessageSending(StatesGroup):
+    CHOICE = State()
     RESIVE = State()
     SELECT_INTERVAL = State()
     RUNING = State()
