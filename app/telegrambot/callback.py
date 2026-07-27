@@ -324,7 +324,7 @@ async def select_banner(callback: CallbackQuery, state: FSMContext):
 
     # Update State
     await state.update_data({"messages": banner_mesages})
-    await state.set_state(states.SendMessage.RESIVE)
+    await state.set_state(states.SendMessage.SELECT_INTERVAL)
 
     # Send Interval Meue
     message = await message.bot.send_message(
