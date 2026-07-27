@@ -293,6 +293,7 @@ async def select_banner(callback: CallbackQuery, state: FSMContext):
     message, chat_id = get_chat_context(callback)
     # feche Banner
     banner_id = int(callback.data.split(";")[1])
+    print(f"choice banner : {banner_id}")
     async with get_db() as session:
         banners_in_db = await services.banner.get_banner(session, banner_id)
     if not isinstance(banners_in_db, BannerMessages):
