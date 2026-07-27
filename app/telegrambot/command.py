@@ -96,6 +96,7 @@ async def send_continuous(message: Message, state: FSMContext):
     if banners_in_db:
         banners = [(b.id, b.name) for b in banners_in_db]
 
+    await state.set_state(states.ContinuousMessageSending.CHOICE)
     await message.edit_text(
         "بنر مورد نظر را انتخاب کنید یا از طریق ارسال مستقیم همین حالا پیام های خود را بفرستید"
     )
