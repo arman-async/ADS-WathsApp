@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
@@ -24,8 +24,8 @@ class DataSendMessage:
     select_random: bool = False
     select_all: bool = False
     repet_min: int = 0
-    selected_contacts: List[str] = field(default_factory=list)
-    messages: List[Message] = field(default_factory=list)
+    selected_contacts: list[str] = field(default_factory=list)
+    messages: list[Message] = field(default_factory=list)
     interval_mode: IntervalSendMessage = field(
         default_factory=lambda: IntervalSendMessageMode.NORMAL
     )
@@ -54,5 +54,12 @@ class ContinuousMessageSending(StatesGroup):
     SELECT_INTERVAL = State()
     RUNING = State()
     STOP = State()
-    messages: list[Message] = []
+    messages: list[Message]
     interval: int = 3
+
+
+class AddBannerMessaeg(StatesGroup):
+    RESIVE_MESSAGES = State()
+    ENTER_NAME = State()
+    messages: list[Message]
+    name: str

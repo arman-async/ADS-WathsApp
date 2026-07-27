@@ -8,7 +8,7 @@ from app.db.session import get_db
 
 from . import states, ui
 from .client import DP
-from .common import select_contecs, send_message_prosess, continuous_message_sending
+from .common import continuous_message_sending, select_contecs, send_message_prosess
 from .utils import get_chat_context
 
 
@@ -19,6 +19,14 @@ async def cancel(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await message.edit_text(Messages.Canceled)
 
+
+
+@DP.callback_query(F.data.startswith(ui.CallbackData.DEL_MESSAGE))
+async def delete_message(callback: CallbackQuery, state: FSMContext):
+    message, _ = get_chat_context(callback)
+    await callback.answer(Messages.Wait)
+    await state.clear()
+    await message.delete()
 
 # =============================================
 # Get WhatsAPP Login Code
@@ -233,4 +241,3 @@ async def select_interval_cntin(callback: CallbackQuery, state: FSMContext):
 async def stop_cntin(callback: CallbackQuery, state: FSMContext):
     await callback.answer(Messages.Wait)
     await state.set_state(states.ContinuousMessageSending.STOP)
-

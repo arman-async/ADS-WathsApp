@@ -5,7 +5,8 @@ from app.db.session import init_db
 from app.telegrambot.client import BOT, DP
 
 logger.info("Loading handlers")
-# ruff: noqa: F403, E402
+
+from app.telegrambot.banner import *
 from app.telegrambot.callback import *
 from app.telegrambot.command import *
 from app.telegrambot.messages import *

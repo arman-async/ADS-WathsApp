@@ -3,10 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Identifier, User
 
+
 async def add_user(db: AsyncSession, user_id: str) -> None:
     if (await get_user(db, user_id)) is not None:
         return
     db.add(User(user_id=user_id))
+
 
 async def get_user(db: AsyncSession, user_id: str) -> User | None:
     return await db.get(User, user_id)

@@ -10,9 +10,9 @@ from app.services import user, whatsapp
 from . import states
 from .client import DP
 from .common import (
-    select_contecs,
     require_login,
     require_user,
+    select_contecs,
     send_message_prosess,
 )
 from .utils import get_chat_context
@@ -81,14 +81,14 @@ async def send(message: Message, state: FSMContext):
         await msg.edit_text(strings.Messages.Disconnected)
         return
 
-    
+
 @DP.message(Command("send_continuous"))
 @require_user
 @require_login
 async def send_continuous(message: Message, state: FSMContext):
     await state.set_state(states.ContinuousMessageSending.RESIVE)
     await message.answer(strings.Messages.Reseving_Message)
-    
+
 
 @DP.message(states.SendMessage.SEND, Command("confirm"))
 async def start_send(message: Message, state: FSMContext):

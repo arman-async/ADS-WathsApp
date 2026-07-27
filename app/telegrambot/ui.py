@@ -12,12 +12,17 @@ from app.models.contacts import Contact
 class CallbackData:
     CONFIRM = "confirm"
     CANCEL = "cancel"
+    DEL_MESSAGE = "DEL_MESSAGE"
     CONTACTS_SELECT_RANDOM = "c_sr;"
     CONTACTS_SELECT_ALL = "c_sa:"
     CONTACTS_SELECT = "c_s;"
     CONTACTS_PAGE = "c_p;"
     INTERVAL_SELECT = "i_s;"
     REPET_SELECT = "r_s;"
+    BANNER_ADD = "b_a;"
+    BANNER_REMOVE = "b_r;"
+    BANNER_SHOW_MESSAGES = "b_s;"
+    BANNER_PANEL = "b_p;"
 
 
 def confirm() -> InlineKeyboardMarkup:
@@ -77,7 +82,7 @@ def interval_select() -> InlineKeyboardMarkup:
 
 def list_contacts(
     items: tuple[Contact, ...],
-    selected: list[str] |None= None,
+    selected: list[str] | None = None,
     selected_all: bool = False,
     selected_rand: bool = False,
     page: int = 0,
@@ -196,4 +201,48 @@ def repet_select() -> InlineKeyboardMarkup:
                 ),
             ],
         ]
+    )
+
+
+def banner_message_main_menu(banners: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+    add = InlineKeyboardButton(
+        text=Buttons.Add,
+        callback_data=CallbackData.BANNER_ADD,
+    )
+    back = InlineKeyboardButton(
+        text=Buttons.Back,
+        callback_data=CallbackData.DEL_MESSAGE,
+    )
+    banners_but = [
+        [
+            InlineKeyboardButton(
+                text=b[1],
+                callback_data=CallbackData.BANNER_PANEL + str(b[0]),
+            )
+        ]
+        for b in banners
+    ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=[*banners_but, [add, back]],
+    )
+
+
+def banner_message_panel(banner_id: int) -> InlineKeyboardMarkup:
+    back = InlineKeyboardButton(
+        text=Buttons.Back,
+        callback_data=CallbackData.DEL_MESSAGE,
+    )
+    delete = InlineKeyboardButton(
+        text=Buttons.Delete,
+        callback_data=CallbackData.BANNER_REMOVE + str(banner_id),
+    )
+    show_messages = InlineKeyboardButton(
+        text=Buttons.Show,
+        callback_data=CallbackData.BANNER_SHOW_MESSAGES + str(banner_id),
+    )
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [delete, show_messages],
+            [back],
+        ],
     )

@@ -1,3 +1,3 @@
-from . import user, whatsapp
+from . import banner, user, whatsapp
 
-__all__ = ["user", "whatsapp"]
+__all__ = ["user", "whatsapp", "banner"]
