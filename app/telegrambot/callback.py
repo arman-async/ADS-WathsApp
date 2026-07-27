@@ -221,9 +221,8 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
     message, _ = get_chat_context(callback)
     await callback.answer(Messages.Wait)
 
-    _: states.DataSendMessage = (await state.get_data()).get("messages")
-    print(_)
-    breakpoint()
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+
     selected = callback.data.split(";")[1]
     __map = {
         "0": states.IntervalSendMessageMode.VEREY_FAST,
@@ -325,7 +324,7 @@ async def select_banner(callback: CallbackQuery, state: FSMContext):
 
     # Update State
     await state.update_data({"messages": banner_mesages})
-    await state.set_state(states.SendMessage.SELECT_INTERVAL)
+    await state.set_state(states.SendMessage.RESIVE)
 
     # Send Interval Meue
     message = await message.bot.send_message(
