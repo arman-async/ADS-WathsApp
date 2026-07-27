@@ -23,6 +23,8 @@ class CallbackData:
     BANNER_REMOVE = "b_r;"
     BANNER_SHOW_MESSAGES = "b_s;"
     BANNER_PANEL = "b_p;"
+    RESEVE_DIRECT_MESSAGE = "r_d_m;"
+    CHOICE_BANNER = "c_b;"
 
 
 def confirm() -> InlineKeyboardMarkup:
@@ -245,4 +247,22 @@ def banner_message_panel(banner_id: int) -> InlineKeyboardMarkup:
             [delete, show_messages],
             [back],
         ],
+    )
+
+
+def choice_banner_or_temp(banners: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+    banners_but = [
+        [
+            InlineKeyboardButton(
+                text=b[1],
+                callback_data=CallbackData.CHOICE_BANNER + str(b[0]),
+            )
+        ]
+        for b in banners
+    ]
+    temp_methode = InlineKeyboardButton(
+        text="ارسال مستقیمم پیام", callback_data=CallbackData.RESEVE_DIRECT_MESSAGE
+    )
+    return InlineKeyboardMarkup(
+        inline_keyboard=[*banners_but, [temp_methode]],
     )

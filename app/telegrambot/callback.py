@@ -1,9 +1,11 @@
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from app import services
+from app.core.logging import logger
 from app.core.strings import Messages
+from app.db.models import BannerMessages
 from app.db.session import get_db
 
 from . import states, ui
@@ -20,13 +22,13 @@ async def cancel(callback: CallbackQuery, state: FSMContext):
     await message.edit_text(Messages.Canceled)
 
 
-
 @DP.callback_query(F.data.startswith(ui.CallbackData.DEL_MESSAGE))
 async def delete_message(callback: CallbackQuery, state: FSMContext):
     message, _ = get_chat_context(callback)
     await callback.answer(Messages.Wait)
     await state.clear()
     await message.delete()
+
 
 # =============================================
 # Get WhatsAPP Login Code
@@ -106,15 +108,89 @@ async def change_page(callback: CallbackQuery, state: FSMContext):
 
 
 # =============================================
-# Start Resive Message
+# Choice Banner Or Temp
 # =============================================
 @DP.callback_query(
     states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CONFIRM)
 )
+async def confirm_and_contiue_send_message(callback: CallbackQuery, state: FSMContext):
+    await callback.answer(Messages.Wait)
+    message, chat_id = get_chat_context(callback)
+    # Show Banner And Temp Methode
+    async with get_db() as session:
+        banners_in_db = await services.banner.get_banners(session, chat_id)
+    banners = []
+    if banners_in_db:
+        banners = [(b.id, b.name) for b in banners_in_db]
+
+    await message.edit_text(
+        "بنر مورد نظر را انتخاب کنید یا از طریق ارسال مستقیم همین حالا پیام های خود را بفرستید"
+    )
+    await message.edit_reply_markup(
+        reply_markup=ui.choice_banner_or_temp(banners=banners)
+    )
+
+
+@DP.callback_query(
+    states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.CHOICE_BANNER)
+)
+async def choice_banner(callback: CallbackQuery, state: FSMContext):
+    await callback.answer(Messages.Wait)
+    message, chat_id = get_chat_context(callback)
+    # feche Banner
+    banner_id = int(callback.data.split(";")[1])
+    async with get_db() as session:
+        banners_in_db = await services.banner.get_banner(session, banner_id)
+    if not isinstance(banners_in_db, BannerMessages):
+        await message.edit_text("بنر مورد نظر یافت نشد")
+        return
+
+    # Get Banner Messages
+    banner_mesages: list[Message] = []
+    banner_mesages_id: tuple[int] = tuple(
+        int(i) for i in banners_in_db.messages.split(",")
+    )
+    for msg_id in banner_mesages_id:
+        try:
+            msg = await message.bot.forward_message(
+                chat_id=chat_id, from_chat_id=chat_id, message_id=msg_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to forward message: {e}")
+            continue
+        else:
+            banner_mesages.append(msg)
+    if not banner_mesages:
+        await message.edit_text("بنر خالی است")
+        return
+
+    # Succses Message
+    await message.delete()
+    await message.bot.send_message(chat_id=chat_id, text="بنر با موفقیت انتخاب شد")
+
+    # Update State
+    data: states.DataSendMessage = (await state.get_data()).get("data")
+    data.messages = banner_mesages
+    await state.update_data({"data": data})
+    await state.set_state(states.SendMessage.SELECT_INTERVAL)
+
+    # Send Interval Meue
+    message = await message.bot.send_message(
+        chat_id=chat_id, text=Messages.Select_Interval
+    )
+    await message.edit_reply_markup(reply_markup=ui.interval_select())
+
+
+# =============================================
+# Start Resive Message
+# =============================================
+@DP.callback_query(
+    states.SendMessage.SELECT, F.data.startswith(ui.CallbackData.RESEVE_DIRECT_MESSAGE)
+)
 async def resive_messages(callback: CallbackQuery, state: FSMContext):
     await callback.answer(Messages.Wait)
-    await state.set_state(states.SendMessage.RESIVE)
     message, _ = get_chat_context(callback)
+    await state.set_state(states.SendMessage.RESIVE)
     await message.edit_text(Messages.Reseving_Message)
     await message.edit_reply_markup(reply_markup=ui.cancel())
 
@@ -145,7 +221,10 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
     message, _ = get_chat_context(callback)
     await callback.answer(Messages.Wait)
 
+    
     data: states.DataSendMessage = (await state.get_data()).get("data")
+    print(data.messages)
+    breakpoint()
     selected = callback.data.split(";")[1]
     __map = {
         "0": states.IntervalSendMessageMode.VEREY_FAST,
