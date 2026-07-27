@@ -87,7 +87,8 @@ async def send(message: Message, state: FSMContext):
 @require_user
 @require_login
 async def send_continuous(message: Message, state: FSMContext):
-    message, chat_id = get_chat_context(message)
+    _, chat_id = get_chat_context(message)
+    message = await message.answer(strings.Messages.Wait)
     # Show Banner And Temp Methode
     async with get_db() as session:
         banners_in_db = await banner.get_banners(session, chat_id)
