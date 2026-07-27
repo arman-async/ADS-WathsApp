@@ -1,8 +1,8 @@
 import time
 from asyncio import sleep
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 import nio
 from async_lru import alru_cache
@@ -19,7 +19,7 @@ INTERVAL_SYNC_CONTACTS = 3600 * 24
 def filter_whatsapp_group(room: nio.MatrixRoom) -> bool:
     if not (room.name and room.display_name):
         return True
-    if not ((room.room_type != "m.space") and (len(room.users) > 2)):
+    if not ((room.room_type.lower() != "m.space") and (len(room.users) > 2)):
         return True
     return False
 
@@ -46,39 +46,17 @@ async def sync(connector: wa.WhatsAppConnected):
     await connector.sync()
 
 
-# @alru_cache()
-# async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
-#     start_time = time.perf_counter()
-#     logger.info(f"Building new WhatsApp connector: {identifier}")
-#     ws = wa.WhatsAppInit(
-#         username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-#         password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
-#         homeserver=SETTINGS.MATRIX_SERVER.HOMESERVER,
-#         identifier=identifier,
-#     )
-
-#     try:
-#         ws = await ws.login()
-#         client = await ws.connect()
-#     except Exception as e:
-#         logger.error(f"Connector initialization failed: {identifier} | error={e}")
-#         raise e
-#     else:
-#         duration = time.perf_counter() - start_time
-#         logger.info(
-#             f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
-#         )
-#         return client
-
 
 _CONNECTOR_CACHE = {}
+
+
 async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
     if identifier in _CONNECTOR_CACHE:
         return _CONNECTOR_CACHE[identifier]
 
     start_time = time.perf_counter()
     logger.info(f"Building new WhatsApp connector: {identifier}")
-    
+
     ws = wa.WhatsAppInit(
         username=WhatsAppUser.gen_username(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
         password=WhatsAppUser.gen_password(identifier, SETTINGS.MATRIX_SERVER.DOMAIN),
@@ -92,15 +70,16 @@ async def builder_connctor(identifier: str) -> wa.WhatsAppConnected | None:
     except Exception as e:
         logger.error(f"Connector initialization failed: {identifier} | error={e}")
         raise e
-    
+
     duration = time.perf_counter() - start_time
-    logger.info(f"Connector initialized successfully: {identifier} | duration={duration:.4f}s")
-    
+    logger.info(
+        f"Connector initialized successfully: {identifier} | duration={duration:.4f}s"
+    )
+
     if client is not None:
         _CONNECTOR_CACHE[identifier] = client
-        
-    return client
 
+    return client
 
 
 @asynccontextmanager
@@ -140,10 +119,20 @@ async def login_code(identifier: str) -> str:
 
 
 @alru_cache(ttl=3600)
-async def get_groups(connector: wa.WhatsAppConnected):
+async def _get_groups(connector: wa.WhatsAppConnected):
+    await connector.sync()
     return await connector.get_dialogs(
         filter=lambda x: filter_whatsapp_group(x) or filter_whatsapp_status_bradcast(x)
     )
+
+
+async def get_groups(connector: wa.WhatsAppConnected):
+    result = await _get_groups(connector)
+    if not result:
+        _get_groups.cache_clear()
+        sync_contacts.cache_clear()
+        sync.cache_clear()
+    return result
 
 
 async def send_text(
@@ -160,4 +149,3 @@ async def send_media(
     # text = None
     # if caption:
     #     text = await send_text(connector, room, caption)
-
