@@ -221,8 +221,8 @@ async def select_interval(callback: CallbackQuery, state: FSMContext):
     message, _ = get_chat_context(callback)
     await callback.answer(Messages.Wait)
 
-    data: states.DataSendMessage = (await state.get_data()).get("data")
-    print(data.messages)
+    _: states.DataSendMessage = (await state.get_data()).get("messages")
+    print(_)
     breakpoint()
     selected = callback.data.split(";")[1]
     __map = {
