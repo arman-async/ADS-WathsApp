@@ -3,7 +3,7 @@ logs/
 .continue/
 __pycache__/
 .pytest_cache/
-
+.mypy_cache/
 *.bkp
 *.log
 *.db
