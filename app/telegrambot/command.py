@@ -83,7 +83,7 @@ async def send(message: Message, state: FSMContext):
         return
 
 
-@DP.message(Command("send_continuous"))
+@DP.message(Command("send_smart"))
 @require_user
 @require_login
 async def send_continuous(message: Message, state: FSMContext):

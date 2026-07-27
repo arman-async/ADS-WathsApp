@@ -261,7 +261,7 @@ def choice_banner_or_temp(banners: list[tuple[int, str]]) -> InlineKeyboardMarku
         for b in banners
     ]
     temp_methode = InlineKeyboardButton(
-        text="ارسال مستقیمم پیام", callback_data=CallbackData.RESEVE_DIRECT_MESSAGE
+        text="ارسال مستقیم پیام", callback_data=CallbackData.RESEVE_DIRECT_MESSAGE
     )
     return InlineKeyboardMarkup(
         inline_keyboard=[*banners_but, [temp_methode]],
