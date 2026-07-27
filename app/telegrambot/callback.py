@@ -293,7 +293,7 @@ async def select_banner(callback: CallbackQuery, state: FSMContext):
     message, chat_id = get_chat_context(callback)
     # feche Banner
     banner_id = int(callback.data.split(";")[1])
-    print(f"choice banner : {banner_id}")
+
     async with get_db() as session:
         banners_in_db = await services.banner.get_banner(session, banner_id)
     if not isinstance(banners_in_db, BannerMessages):
@@ -324,9 +324,7 @@ async def select_banner(callback: CallbackQuery, state: FSMContext):
     await message.bot.send_message(chat_id=chat_id, text="بنر با موفقیت انتخاب شد")
 
     # Update State
-    data: states.DataSendMessage = (await state.get_data()).get("data")
-    data.messages = banner_mesages
-    await state.update_data({"data": data})
+    await state.update_data({"messages": banner_mesages})
     await state.set_state(states.SendMessage.SELECT_INTERVAL)
 
     # Send Interval Meue
