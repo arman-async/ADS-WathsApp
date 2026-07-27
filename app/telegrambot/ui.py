@@ -77,17 +77,18 @@ def interval_select() -> InlineKeyboardMarkup:
 
 def list_contacts(
     items: tuple[Contact, ...],
-    selected: list[str] = [],
+    selected: list[str] |None= None,
     selected_all: bool = False,
     selected_rand: bool = False,
     page: int = 0,
     page_size: int = 5,
 ) -> InlineKeyboardMarkup:
+    selected = selected or []
     total_pages = math.ceil(len(items) / page_size) - 1
-    if page < 0:
-        page = 0
-    if page > total_pages:
-        page = total_pages
+
+    page = max(page, 0)
+    page = min(page, total_pages)
+
     start = page * page_size
     end = start + page_size
     paginated_items = items[start:end]
