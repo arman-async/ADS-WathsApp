@@ -78,3 +78,7 @@ class Buttons:
     Next: str = string_get("but_next")
     Previous: str = string_get("but_previous")
     Random : str = string_get("but_random")
+    Back: str = string_get("but_back")
+    Delete: str = string_get("but_delete")
+    Add: str = string_get("but_add")
+    Show: str = string_get("but_show")
