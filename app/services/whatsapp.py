@@ -19,31 +19,31 @@ INTERVAL_SYNC_CONTACTS = 3600 * 24
 def filter_whatsapp_group(room: nio.MatrixRoom) -> bool:
     if not (room.name and room.display_name):
         return True
-    if not ((room.room_type.lower() != "m.space") and (len(room.users) > 2)):
-        return True
-    return False
+    return not ((room.room_type.lower() != "m.space") and (len(room.users) > 2))
 
 
 def filter_whatsapp_status_bradcast(room: nio.MatrixRoom) -> bool:
     title: str = room.name if room.name else room.display_name
-    if title.lower() == "whatsapp status broadcast":
-        return True
-    return False
+    return title.lower() == "whatsapp status broadcast"
 
 
 @alru_cache(ttl=INTERVAL_SYNC_CONTACTS)
 async def sync_contacts(connector: wa.WhatsAppConnected):
-
+    logger.info("Syncing WhatsApp contacts ...")
     await connector.sync()
     for s in ("group", "groups", "contacts"):
         await connector.send_text(await connector.bot_room(), f"!wa sync {s}")
-
+    logger.info("Syncing WhatsApp contacts done")
+    logger.info("Accepting WhatsApp invites ...")
     await connector.accept_invites()
+    logger.info("Accepting WhatsApp invites done")
 
 
 @alru_cache(ttl=INTERVAL_SYNC)
 async def sync(connector: wa.WhatsAppConnected):
+    logger.info("Syncing WhatsApp ...")
     await connector.sync()
+    logger.info("Syncing WhatsApp done")
 
 
 
@@ -120,18 +120,26 @@ async def login_code(identifier: str) -> str:
 
 @alru_cache(ttl=3600)
 async def _get_groups(connector: wa.WhatsAppConnected):
+    logger.info("Fetching groups from WhatsApp ...")
     await connector.sync()
-    return await connector.get_dialogs(
+    result = await connector.get_dialogs(
         filter=lambda x: filter_whatsapp_group(x) or filter_whatsapp_status_bradcast(x)
     )
-
+    logger.info("Fetching groups from WhatsApp done")
+    return result
 
 async def get_groups(connector: wa.WhatsAppConnected):
+    logger.info("Get groups from WhatsApp ...")
     result = await _get_groups(connector)
+    logger.info(f"Get groups from WhatsApp done | {len(result)}")
     if not result:
+        logger.warning("No groups found in WhatsApp")
+        logger.warning("Clearing cache ...")
         _get_groups.cache_clear()
         sync_contacts.cache_clear()
         sync.cache_clear()
+        logger.warning("Clearing cache done")
+    logger.info("Get groups from WhatsApp done")
     return result
 
 
