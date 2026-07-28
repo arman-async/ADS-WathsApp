@@ -51,9 +51,7 @@ async def user_exists_in_db(update: Union[Message, CallbackQuery]) -> bool:
     _, chat_id = get_chat_context(update)
     async with get_db() as session:
         user = await services.user.get_user(session, chat_id)
-    if user:
-        return True
-    return False
+    return bool(user)
 
 
 def require_user(func):
@@ -86,9 +84,7 @@ async def login_exists_in_db(update: Union[Message, CallbackQuery]) -> bool:
     async with get_db() as session:
         accounts = await services.user.get_identifiers(session, chat_id)
         account = accounts.first()
-    if account:
-        return True
-    return False
+    return bool(account)
 
 
 def require_login(func):
@@ -223,13 +219,12 @@ async def sleep_stream_message(
     interval_refresh = 60.0 / float(max_refresh_in_min)
     logger.info(f"sleep {sleep_time} in {max_refresh_in_min} min's")
     while True:
-        if check_stop:
-            if await check_stop():
-                try:
-                    await message.edit_text(msg_stop, reply_markup=reply_markup)
-                except TelegramRetryAfter as e:
-                    logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
-                break
+        if check_stop and check_stop and (await check_stop()):            
+            try:
+                await message.edit_text(msg_stop, reply_markup=reply_markup)
+            except TelegramRetryAfter as e:
+                logger.warning(f"Telegram rate limit - sleep {e.retry_after}/s")
+            break
 
         elapsed = time.perf_counter() - start_time
         remaining = sleep_time - elapsed
@@ -264,9 +259,8 @@ async def sleep_stream_message(
             await asyncio.sleep(interval_refresh)
             continue
 
-        if check_stop:
-            if await check_stop():
-                break
+        if check_stop and (await check_stop()):
+            break
         await asyncio.sleep(interval_refresh)
 
 
@@ -278,9 +272,7 @@ async def send_message_prosess(
         s = await state.get_state()
         if not s:
             return True
-        if  s == states.SendMessage.RUNING:
-            return False
-        return True
+        return  s != states.SendMessage.RUNING
 
     async def trminat_log():
         try:
@@ -410,9 +402,7 @@ async def continuous_message_sending(
         run_state = await state.get_state()
         if not run_state:
             return True
-        if run_state == states.ContinuousMessageSending.STOP:
-            return True
-        return False
+        return run_state == states.ContinuousMessageSending.STOP
 
     async def get_random_chat() -> nio.MatrixRoom | None:
         async with get_connector(update) as connector:
@@ -431,7 +421,7 @@ async def continuous_message_sending(
             return
 
         chat = await get_random_chat()
-        if chat is None:
+        if not chat:
             continue
 
         message = await get_random_message()
