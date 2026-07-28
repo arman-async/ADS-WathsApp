@@ -407,6 +407,8 @@ async def continuous_message_sending(
     async def get_random_chat() -> nio.MatrixRoom | None:
         async with get_connector(update) as connector:
             all_groups, _ = await wa_service.get_groups(connector)
+            if not all_groups:
+                return
             dilog = choice(all_groups)
             return connector.client.rooms.get(dilog.room_id)
 
@@ -415,6 +417,7 @@ async def continuous_message_sending(
         return choice(messages)
 
     counter_sent_message = 0
+    counter_e_get_chat = 0
     while True:
         if await check_termination():
             await msg.edit_text(strings.Messages.Canceled)
@@ -422,7 +425,25 @@ async def continuous_message_sending(
 
         chat = await get_random_chat()
         if not chat:
+            counter_e_get_chat += 1
+            if counter_e_get_chat > 45*2: # ~45 minutes - sleep is 30 seconds
+                await msg.edit_text("خطا هیچ گروهی پیدا نشد ، این فرایند متوقف شده است")
+                return
+            await sleep_stream_message(
+                message=msg,
+                sleep_time=30,
+                text=\
+                "در حال دریافت گروه ..."
+                + "\n"
+                + "این فرایند ممکند از بیش از 30 دقیقه زمان بر باشد"
+                + "\n"
+                + strings.Messages.Wait,
+                reply_markup=ui.cancel(),
+                check_stop=check_termination,
+            )
             continue
+
+        counter_e_get_chat = 0
 
         message = await get_random_message()
         if not isinstance(message, Message):
