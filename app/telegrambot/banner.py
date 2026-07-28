@@ -114,7 +114,6 @@ async def resive_banner_messages(message: Message, state: FSMContext):
         return
 
     messages.append(message)
-    print(f"add {messages}")
     await state.update_data({"messages": messages})
     logger.info(f"Saved message In Banner: {message.message_id}")
     await message.reply(strings.Messages.Resevied_Message, reply_markup=ui.confirm())
