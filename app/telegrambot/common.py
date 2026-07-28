@@ -2,11 +2,11 @@ import asyncio
 import math
 import tempfile
 import time
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
 from random import choice, choices, randint, uniform
-from typing import AsyncGenerator, Awaitable, Callable, Union
 
 import nio
 from aiogram import Bot
@@ -31,7 +31,7 @@ from . import states, ui
 from .utils import extract_file_id, get_chat_context, get_extension_file
 
 
-def extract_update(*args, **kwargs) -> Union[Message, CallbackQuery]:
+def extract_update(*args, **kwargs) -> Message| CallbackQuery:
     """
     Finds the first argument that is an instance of Message or CallbackQuery.
     """
@@ -47,7 +47,7 @@ def extract_update(*args, **kwargs) -> Union[Message, CallbackQuery]:
 # ===================================
 #              USER CHECK
 # ===================================
-async def user_exists_in_db(update: Union[Message, CallbackQuery]) -> bool:
+async def user_exists_in_db(update: Message| CallbackQuery) -> bool:
     _, chat_id = get_chat_context(update)
     async with get_db() as session:
         user = await services.user.get_user(session, chat_id)
@@ -79,7 +79,7 @@ def require_user(func):
 # ===================================
 #              LOGIN CHECK
 # ===================================
-async def login_exists_in_db(update: Union[Message, CallbackQuery]) -> bool:
+async def login_exists_in_db(update: Message| CallbackQuery) -> bool:
     _, chat_id = get_chat_context(update)
     async with get_db() as session:
         accounts = await services.user.get_identifiers(session, chat_id)
@@ -111,7 +111,7 @@ def require_login(func):
 
 @asynccontextmanager
 async def get_connector(
-    update: Union[Message, CallbackQuery],
+    update: Message| CallbackQuery,
 ) -> AsyncGenerator[wa_service.wa.WhatsAppConnected | None, None]:
     _, chat_id = get_chat_context(update)
 
@@ -130,7 +130,7 @@ async def get_connector(
 
 @require_user
 async def select_contecs(
-    update: Union[Message, CallbackQuery],
+    update: Message| CallbackQuery,
     state_data: states.DataSendMessage,
     page_size: int = 5,
 ):
@@ -213,13 +213,13 @@ async def sleep_stream_message(
     text: str = "",
     max_refresh_in_min: int = 10,
     check_stop: Callable[[], Awaitable[bool]] | None = None,
-    msg_stop:str=strings.Messages.Canceled,
+    msg_stop: str = strings.Messages.Canceled,
 ):
     start_time: float = time.perf_counter()
     interval_refresh = 60.0 / float(max_refresh_in_min)
     logger.info(f"sleep {sleep_time} in {max_refresh_in_min} min's")
     while True:
-        if check_stop and check_stop and (await check_stop()):            
+        if check_stop and check_stop and (await check_stop()):
             try:
                 await message.edit_text(msg_stop, reply_markup=reply_markup)
             except TelegramRetryAfter as e:
@@ -254,7 +254,7 @@ async def sleep_stream_message(
             logger.warning(f"Server error {e} → retry in {backoff}s")
             await asyncio.sleep(backoff)
             continue
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.exception(f"Unexpected error while editing message: {e}")
             await asyncio.sleep(interval_refresh)
             continue
@@ -265,14 +265,14 @@ async def sleep_stream_message(
 
 
 async def send_message_prosess(
-    update: Union[Message, CallbackQuery], state: FSMContext
+    update: Message| CallbackQuery, state: FSMContext
 ):
 
     async def is_trminat() -> bool:
         s = await state.get_state()
         if not s:
             return True
-        return  s != states.SendMessage.RUNING
+        return s != states.SendMessage.RUNING
 
     async def trminat_log():
         try:
@@ -381,7 +381,7 @@ async def send_message_prosess(
 
 
 async def continuous_message_sending(
-    update: Union[Message, CallbackQuery], state: FSMContext
+    update: Message| CallbackQuery, state: FSMContext
 ):
     msg, _ = get_chat_context(update)
     delays = {
@@ -442,5 +442,4 @@ async def continuous_message_sending(
             + strings.Messages.Wait,
             reply_markup=ui.cancel(),
             check_stop=check_termination,
-            
         )
